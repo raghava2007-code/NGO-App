@@ -1,0 +1,6 @@
+{
+  "name": "GanitMitra",
+  "description": "NGO Mathematics Learning Application tailored for students with English and Telugu language support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

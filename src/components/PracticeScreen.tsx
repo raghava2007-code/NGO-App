@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Check, X, HelpCircle, Volume2, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Check, X, HelpCircle, Volume2 } from 'lucide-react';
 
 interface PracticeScreenProps {
   t: (en: string, te: string) => string;
@@ -11,53 +11,49 @@ export default function PracticeScreen({ t, onBack }: PracticeScreenProps) {
   const [status, setStatus] = useState<'idle' | 'correct' | 'incorrect'>('idle');
   const [showHint, setShowHint] = useState(false);
 
-  const checkAnswer = () => {
-    if (!answer) return;
-    if (answer.trim() === '7') {
-      setStatus('correct');
+  const handleAction = () => {
+    if (status === 'idle') {
+      if (!answer) return;
+      if (answer.trim() === '7') {
+        setStatus('correct');
+      } else {
+        setStatus('incorrect');
+      }
     } else {
-      setStatus('incorrect');
+      // Move to next question
+      setAnswer('');
+      setStatus('idle');
+      setShowHint(false);
     }
   };
 
   return (
-    <div className="animate-in fade-in duration-300 max-w-4xl mx-auto pt-6">
+    <div className="animate-in fade-in duration-300 max-w-3xl mx-auto pt-6">
       <button 
         onClick={onBack}
         className="flex items-center gap-2 text-gray-500 hover:text-black transition-colors font-medium mb-8"
       >
         <ArrowLeft size={20} />
-        {t('Back to Dashboard', 'డాష్‌బోర్డ్‌కు తిరిగి వెళ్లండి')}
+        {t('Back to Home', 'హోమ్‌కి తిరిగి వెళ్లండి')}
       </button>
 
-      {/* Breadcrumbs / Flow Indicator */}
-      <div className="flex items-center gap-4 mb-10 text-sm font-semibold text-gray-400">
-        <span className="text-app-text">{t('Chapter Explanation', 'అధ్యాయం వివరణ')}</span>
-        <ArrowRight size={16} />
-        <span className="text-app-text">{t('Revision', 'పునర్విమర్శ')}</span>
-        <ArrowRight size={16} />
-        <span className="text-app-text">{t('Examples', 'ఉదాహరణలు')}</span>
-        <ArrowRight size={16} />
-        <span className="bg-app-text text-white px-3 py-1 rounded-full shadow-sm">{t('Practice Test', 'ప్రాక్టీస్ టెస్ట్')}</span>
-      </div>
-
-      <div className="bg-white rounded-[40px] p-12 shadow-sm border border-black/5 text-center relative overflow-hidden">
+      <div className="bg-white rounded-[40px] p-8 md:p-12 shadow-sm border border-black/5 text-center relative overflow-hidden">
         
-        <div className="absolute top-8 right-8">
+        <div className="absolute top-6 right-6 md:top-8 md:right-8">
            <button 
              onClick={() => setShowHint(!showHint)}
-             className="w-12 h-12 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors"
+             className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors"
            >
-             <HelpCircle size={24} />
+             <HelpCircle size={20} />
            </button>
         </div>
 
-        <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-full font-semibold text-sm mb-8">
+        <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-full font-semibold text-sm mb-12 mt-4 md:mt-0">
           <Volume2 size={18} />
           {t('Addition - Level 1', 'కూడిక - స్థాయి 1')}
         </div>
 
-        <div className="text-7xl font-bold tracking-tighter mb-16 flex items-center justify-center gap-6">
+        <div className="text-5xl md:text-7xl font-bold tracking-tighter mb-16 flex items-center justify-center gap-4 md:gap-6">
           <span>5</span>
           <span className="text-gray-300">+</span>
           <span>2</span>
@@ -68,9 +64,10 @@ export default function PracticeScreen({ t, onBack }: PracticeScreenProps) {
               value={answer}
               onChange={(e) => {
                 setAnswer(e.target.value);
-                setStatus('idle');
+                if(status !== 'idle') setStatus('idle');
               }}
-              className={`w-32 h-24 text-center rounded-2xl border-4 outline-none transition-all text-5xl font-bold
+              disabled={status !== 'idle'}
+              className={`w-24 h-20 md:w-32 md:h-24 text-center rounded-2xl border-4 outline-none transition-all text-4xl md:text-5xl font-bold
                 ${status === 'idle' ? 'border-gray-200 focus:border-app-accent bg-gray-50' : ''}
                 ${status === 'correct' ? 'border-green-500 bg-green-50 text-green-600' : ''}
                 ${status === 'incorrect' ? 'border-red-500 bg-red-50 text-red-600' : ''}
@@ -78,13 +75,13 @@ export default function PracticeScreen({ t, onBack }: PracticeScreenProps) {
               maxLength={2}
             />
             {status === 'correct' && (
-              <div className="absolute -right-6 -top-6 w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg animate-in zoom-in">
-                <Check size={28} strokeWidth={4} />
+              <div className="absolute -right-4 -top-4 md:-right-6 md:-top-6 w-10 h-10 md:w-12 md:h-12 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg animate-in zoom-in">
+                <Check size={24} strokeWidth={4} />
               </div>
             )}
             {status === 'incorrect' && (
-              <div className="absolute -right-6 -top-6 w-12 h-12 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg animate-in zoom-in">
-                <X size={28} strokeWidth={4} />
+              <div className="absolute -right-4 -top-4 md:-right-6 md:-top-6 w-10 h-10 md:w-12 md:h-12 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg animate-in zoom-in">
+                <X size={24} strokeWidth={4} />
               </div>
             )}
           </div>
@@ -101,10 +98,12 @@ export default function PracticeScreen({ t, onBack }: PracticeScreenProps) {
         )}
 
         <button 
-          onClick={checkAnswer}
-          className="bg-app-text text-white text-xl font-bold py-5 px-16 rounded-full hover:bg-black transition-transform hover:scale-105 active:scale-95 shadow-xl"
+          onClick={handleAction}
+          className={`text-white text-lg md:text-xl font-bold py-4 px-12 md:py-5 md:px-16 rounded-full transition-all shadow-lg active:scale-95 ${
+            status === 'idle' ? 'bg-app-text hover:bg-black hover:-translate-y-1' : 'bg-app-lime text-black hover:bg-[#bce451] hover:-translate-y-1'
+          }`}
         >
-          {t('Check Answer', 'సమాధానం తనిఖీ చేయండి')}
+          {status === 'idle' ? t('Check Answer', 'సమాధానం తనిఖీ చేయండి') : t('Next Question', 'తదుపరి ప్రశ్న')}
         </button>
 
       </div>
