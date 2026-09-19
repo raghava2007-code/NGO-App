@@ -1,27 +1,97 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Calculator } from 'lucide-react';
+import { Eye, EyeOff, Calculator, GraduationCap, Presentation, ArrowLeft, Check } from 'lucide-react';
 import AnimatedLogo from './AnimatedLogo';
 
+export type UserRole = 'student' | 'teacher';
+export type StudentLevel = 'Beginner' | 'Intermediate' | 'Advanced';
+
 interface LoginScreenProps {
-  onLoginSuccess: () => void;
+  onLoginSuccess: (userData: { role: UserRole; username: string; level: StudentLevel }) => void;
   t: (en: string, te: string) => string;
 }
 
 export default function LoginScreen({ onLoginSuccess, t }: LoginScreenProps) {
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [level, setLevel] = useState<StudentLevel>('Beginner');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Strict name validation function
+  // Allowed: alphabetical characters (a-z, A-Z) and maximum a single period (.)
+  // Forbidden: Numbers, spaces, and all other special characters (@, #, _, -, etc.)
+  const validateUsername = (name: string): string | null => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return t('Please enter your name.', 'దయచేసి మీ పేరును నమోదు చేయండి.');
+    }
+
+    if (/\s/.test(name)) {
+      return t('Spaces are not allowed. Only letters and an optional single period (.) are permitted.', 'ఖాళీలు అనుమతించబడవు. అక్షరాలు మరియు ఒక చుక్క (.) మాత్రమే అనుమతించబడతాయి.');
+    }
+
+    if (/\d/.test(name)) {
+      return t('Numbers are not permitted in the name field.', 'పేరులో అంకెలు అనుమతించబడవు.');
+    }
+
+    // Must match letters and dot only
+    if (!/^[a-zA-Z.]+$/.test(name)) {
+      return t('Special characters are not allowed. Only letters (A-Z, a-z) and a single period (.) are permitted.', 'ప్రత్యేక అక్షరాలు అనుమతించబడవు. కేవలం అక్షరాలు (A-Z, a-z) మరియు ఒక చుక్క (.) మాత్రమే అనుమతించబడతాయి.');
+    }
+
+    // Single period check
+    const dotCount = (name.match(/\./g) || []).length;
+    if (dotCount > 1) {
+      return t('Only one period (.) is allowed for initials or surnames.', 'ఇనీషియల్స్ కోసం కేవలం ఒక చుక్క (.) మాత్రమే అనుమతించబడుతుంది.');
+    }
+
+    return null;
+  };
+
+  const handleStudentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
-    // Simple prototype credentials check
-    if (username === 'abcde' && password === '12345') {
-      onLoginSuccess();
+
+    const validationError = validateUsername(username);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    if (!level) {
+      setError(t('Please select a level.', 'దయచేసి ఒక స్థాయిని ఎంచుకోండి.'));
+      return;
+    }
+
+    onLoginSuccess({
+      role: 'student',
+      username: username.trim(),
+      level: level,
+    });
+  };
+
+  const handleTeacherSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const validationError = validateUsername(username);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    const trimmedUser = username.trim();
+
+    // Teacher authentication using prototype password pattern or teacher username
+    if (password === '12345' || password === 'admin' || trimmedUser.toLowerCase() === 'teacher' || trimmedUser.toLowerCase() === 'admin') {
+      onLoginSuccess({
+        role: 'teacher',
+        username: trimmedUser || 'Teacher',
+        level: 'Advanced',
+      });
     } else {
-      setError(t('Invalid username or password.', 'చెల్లని వినియోగదారు పేరు లేదా పాస్‌వర్డ్.'));
+      setError(t('Invalid teacher password. Hint: 12345', 'చెల్లని పాస్‌వర్డ్. సూచన: 12345'));
     }
   };
 
@@ -54,9 +124,9 @@ export default function LoginScreen({ onLoginSuccess, t }: LoginScreenProps) {
           </div>
         </div>
 
-        {/* Right Panel - Form */}
+        {/* Right Panel - Role Selection & Form */}
         <div className="w-full lg:w-1/2 p-8 md:p-12 lg:p-16 flex flex-col justify-center relative bg-[#2F2F2F]">
-          {/* Mobile Branding (Visible only on smaller screens) */}
+          {/* Mobile Branding */}
           <div className="lg:hidden flex items-center gap-3 mb-10">
             <div className="w-10 h-10 rounded-xl bg-[#D4F670] flex items-center justify-center text-[#2F2F2F] font-bold text-xl">
               <Calculator size={24} />
@@ -65,69 +135,252 @@ export default function LoginScreen({ onLoginSuccess, t }: LoginScreenProps) {
           </div>
 
           <div className="max-w-md w-full mx-auto lg:mx-0">
-            <h2 className="text-3xl md:text-4xl font-bold mb-3 text-white">{t('Log in', 'లాగిన్ చేయండి')}</h2>
-            <p className="text-[#F4F5F8]/60 mb-10 text-lg">
-              {t('Please enter your details to continue.', 'దయచేసి కొనసాగించడానికి మీ వివరాలను నమోదు చేయండి.')}
-            </p>
+            
+            {/* STEP 1: ROLE SELECTION */}
+            {selectedRole === null && (
+              <div className="animate-in fade-in duration-300">
+                <h2 className="text-3xl md:text-4xl font-bold mb-3 text-white">
+                  {t('Welcome', 'స్వాగతం')}
+                </h2>
+                <p className="text-[#F4F5F8]/60 mb-8 text-base md:text-lg">
+                  {t('Please select your role to continue:', 'కొనసాగించడానికి దయచేసి మీ పాత్రను ఎంచుకోండి:')}
+                </p>
 
-            <form onSubmit={handleLogin} className="space-y-6">
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[#F4F5F8]/80 ml-1 block">{t('Username', 'వినియోగదారు పేరు')}</label>
-                <input 
-                  type="text" 
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder={t('Enter username', 'వినియోగదారు పేరు నమోదు చేయండి')}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] transition-all outline-none text-white placeholder:text-white/30 text-lg"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[#F4F5F8]/80 ml-1 block">{t('Password', 'పాస్‌వర్డ్')}</label>
-                <div className="relative">
-                  <input 
-                    type={showPassword ? "text" : "password"} 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t('Enter password', 'పాస్‌వర్డ్ నమోదు చేయండి')}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl pl-5 pr-12 py-4 focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] transition-all outline-none text-white placeholder:text-white/30 text-lg"
-                  />
-                  <button 
+                {/* Two small, rounded-corner rectangular options arranged vertically, one above the other */}
+                <div className="flex flex-col gap-4 w-full">
+                  {/* Student Option */}
+                  <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors p-1"
+                    onClick={() => {
+                      setSelectedRole('student');
+                      setError('');
+                    }}
+                    className="group w-full p-5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#D4F670]/80 rounded-2xl flex items-center justify-between transition-transform duration-200 hover:scale-105 active:scale-95 text-left cursor-pointer shadow-sm"
                   >
-                    {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-[#D4F670]/20 text-[#D4F670] flex items-center justify-center group-hover:bg-[#D4F670] group-hover:text-[#2F2F2F] transition-colors">
+                        <GraduationCap size={26} />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                          {t('Student', 'విద్యార్థి')} <span className="text-lg">👤</span>
+                        </h3>
+                        <p className="text-sm text-[#F4F5F8]/60">
+                          {t('Practice math & track your progress', 'గణితాన్ని సాధన చేసి మీ పురోగతిని చూడండి')}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[#D4F670] text-xl font-bold opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                  </button>
+
+                  {/* Teacher Option */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRole('teacher');
+                      setError('');
+                    }}
+                    className="group w-full p-5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#D4F670]/80 rounded-2xl flex items-center justify-between transition-transform duration-200 hover:scale-105 active:scale-95 text-left cursor-pointer shadow-sm"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center group-hover:bg-blue-400 group-hover:text-[#2F2F2F] transition-colors">
+                        <Presentation size={26} />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                          {t('Teacher', 'ఉపాధ్యాయుడు')} <span className="text-lg">👨‍🏫</span>
+                        </h3>
+                        <p className="text-sm text-[#F4F5F8]/60">
+                          {t('Monitor students & review analytics', 'విద్యార్థులను పర్యవేక్షించి విశ్లేషణలను చూడండి')}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[#D4F670] text-xl font-bold opacity-0 group-hover:opacity-100 transition-opacity">→</span>
                   </button>
                 </div>
               </div>
+            )}
 
-              {error && (
-                <div className="text-red-400 text-sm font-medium px-4 bg-red-400/10 py-3 rounded-xl text-center border border-red-400/20">
-                  {error}
-                </div>
-              )}
-
-              <div className="pt-2">
-                <button 
-                  type="submit"
-                  className="w-full bg-[#D4F670] text-[#2F2F2F] font-bold text-lg rounded-2xl py-4 mt-2 hover:bg-[#bce451] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-[#D4F670]/10 flex items-center justify-center gap-2"
+            {/* STEP 2A: STUDENT LOGIN */}
+            {selectedRole === 'student' && (
+              <div className="animate-in fade-in duration-300">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRole(null);
+                    setError('');
+                  }}
+                  className="inline-flex items-center gap-2 text-sm text-[#F4F5F8]/60 hover:text-white mb-6 transition-colors"
                 >
-                  {t('Log In', 'లాగిన్ అవ్వండి')}
+                  <ArrowLeft size={16} />
+                  {t('Change Role', 'పాత్రను మార్చండి')}
                 </button>
+
+                <h2 className="text-3xl font-bold mb-2 text-white flex items-center gap-2">
+                  {t('Student Login', 'విద్యార్థి లాగిన్')} <span>👤</span>
+                </h2>
+                <p className="text-[#F4F5F8]/60 mb-6 text-sm md:text-base">
+                  {t('Enter your username and select your current skill level.', 'మీ వినియోగదారు పేరును నమోదు చేసి మీ ప్రస్తుత స్థాయిని ఎంచుకోండి.')}
+                </p>
+
+                <form onSubmit={handleStudentSubmit} className="space-y-6">
+                  {/* Username Input */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between ml-1">
+                      <label className="text-sm font-medium text-[#F4F5F8]/80 block">
+                        {t('Username', 'వినియోగదారు పేరు')}
+                      </label>
+                      <span className="text-[11px] text-[#D4F670]/80 font-mono">
+                        {t('Letters & 1 dot only (e.g. R.Kumar)', 'అక్షరాలు & 1 చుక్క మాత్రమే')}
+                      </span>
+                    </div>
+                    <input 
+                      type="text" 
+                      value={username}
+                      onChange={(e) => {
+                        setUsername(e.target.value);
+                        if (error) setError('');
+                      }}
+                      placeholder={t('e.g. Raghava or R.Sharma', 'ఉదా: Raghava లేదా R.Sharma')}
+                      autoFocus
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] transition-all outline-none text-white placeholder:text-white/30 text-base md:text-lg"
+                    />
+                  </div>
+
+                  {/* Level Selection */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-[#F4F5F8]/80 ml-1 block">
+                      {t('Level', 'స్థాయి')}
+                    </label>
+                    <div className="grid grid-cols-3 gap-2.5">
+                      {(['Beginner', 'Intermediate', 'Advanced'] as StudentLevel[]).map((lvl) => (
+                        <button
+                          key={lvl}
+                          type="button"
+                          onClick={() => setLevel(lvl)}
+                          className={`py-3 px-2 rounded-xl text-sm font-semibold border transition-all flex flex-col items-center justify-center gap-1 ${
+                            level === lvl
+                              ? 'bg-[#D4F670] text-[#2F2F2F] border-[#D4F670] shadow-md shadow-[#D4F670]/10 font-bold'
+                              : 'bg-white/5 text-white/80 border-white/10 hover:bg-white/10'
+                          }`}
+                        >
+                          <span>{t(lvl, lvl === 'Beginner' ? 'ప్రారంభం' : lvl === 'Intermediate' ? 'మధ్యస్థం' : 'అధునాతనం')}</span>
+                          {level === lvl && <Check size={14} className="stroke-[3]" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="text-red-400 text-sm font-medium px-4 bg-red-400/10 py-3 rounded-xl text-center border border-red-400/20">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="pt-2">
+                    <button 
+                      type="submit"
+                      className="w-full bg-[#D4F670] text-[#2F2F2F] font-bold text-lg rounded-2xl py-4 hover:bg-[#bce451] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-[#D4F670]/10 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {t('Start Learning', 'నేర్చుకోవడం ప్రారంభించండి')} →
+                    </button>
+                  </div>
+                </form>
               </div>
-              
-            </form>
-            
-            {/* Temporary hint for the prototype */}
-            <div className="mt-12 text-center border-t border-white/10 pt-6">
-              <p className="text-xs text-[#F4F5F8]/40 mb-3 uppercase tracking-wider font-semibold">Prototype Credentials</p>
-              <div className="flex justify-center gap-3 text-sm font-medium text-[#F4F5F8]/70">
-                <span className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">User: <span className="text-white">abcde</span></span>
-                <span className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">Pass: <span className="text-white">12345</span></span>
+            )}
+
+            {/* STEP 2B: TEACHER LOGIN */}
+            {selectedRole === 'teacher' && (
+              <div className="animate-in fade-in duration-300">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRole(null);
+                    setError('');
+                  }}
+                  className="inline-flex items-center gap-2 text-sm text-[#F4F5F8]/60 hover:text-white mb-6 transition-colors"
+                >
+                  <ArrowLeft size={16} />
+                  {t('Change Role', 'పాత్రను మార్చండి')}
+                </button>
+
+                <h2 className="text-3xl font-bold mb-2 text-white flex items-center gap-2">
+                  {t('Teacher Login', 'ఉపాధ్యాయుల లాగిన్')} <span>👨‍🏫</span>
+                </h2>
+                <p className="text-[#F4F5F8]/60 mb-6 text-sm md:text-base">
+                  {t('Access student progress analytics and class monitoring.', 'విద్యార్థుల పురోగతి విశ్లేషణలు మరియు తరగతి పర్యవేక్షణను యాక్సెస్ చేయండి.')}
+                </p>
+
+                <form onSubmit={handleTeacherSubmit} className="space-y-5">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between ml-1">
+                      <label className="text-sm font-medium text-[#F4F5F8]/80 block">
+                        {t('Teacher Username', 'ఉపాధ్యాయుని వినియోగదారు పేరు')}
+                      </label>
+                      <span className="text-[11px] text-[#D4F670]/80 font-mono">
+                        {t('Letters & 1 dot only', 'అక్షరాలు & 1 చుక్క మాత్రమే')}
+                      </span>
+                    </div>
+                    <input 
+                      type="text" 
+                      value={username}
+                      onChange={(e) => {
+                        setUsername(e.target.value);
+                        if (error) setError('');
+                      }}
+                      placeholder={t('e.g. S.Rao or Teacher', 'ఉదా: S.Rao లేదా Teacher')}
+                      autoFocus
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] transition-all outline-none text-white placeholder:text-white/30 text-base md:text-lg"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-[#F4F5F8]/80 ml-1 block">
+                      {t('Password', 'పాస్‌వర్డ్')}
+                    </label>
+                    <div className="relative">
+                      <input 
+                        type={showPassword ? "text" : "password"} 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder={t('Enter password', 'పాస్‌వర్డ్ నమోదు చేయండి')}
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl pl-5 pr-12 py-3.5 focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] transition-all outline-none text-white placeholder:text-white/30 text-base md:text-lg"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors p-1"
+                      >
+                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="text-red-400 text-sm font-medium px-4 bg-red-400/10 py-3 rounded-xl text-center border border-red-400/20">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="pt-2">
+                    <button 
+                      type="submit"
+                      className="w-full bg-[#D4F670] text-[#2F2F2F] font-bold text-lg rounded-2xl py-4 hover:bg-[#bce451] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-[#D4F670]/10 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {t('Access Teacher Portal', 'ఉపాధ్యాయుల పోర్టల్‌లోకి ప్రవేశించండి')} →
+                    </button>
+                  </div>
+                </form>
+
+                <div className="mt-8 text-center border-t border-white/10 pt-4">
+                  <p className="text-xs text-[#F4F5F8]/40 mb-2 uppercase tracking-wider font-semibold">Teacher Quick Access</p>
+                  <div className="flex justify-center gap-3 text-xs font-medium text-[#F4F5F8]/70">
+                    <span className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">User: <span className="text-white">teacher</span></span>
+                    <span className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">Pass: <span className="text-white">12345</span></span>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
           </div>
         </div>
