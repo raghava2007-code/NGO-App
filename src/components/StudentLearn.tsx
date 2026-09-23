@@ -1,11 +1,14 @@
-import { useState } from 'react';
-import { BookOpen, CheckCircle, ArrowRight, PlayCircle } from 'lucide-react';
-import { StudentLevel } from '../types';
+import { useState, useEffect } from 'react';
+import { CheckCircle, ArrowRight, PlayCircle, Volume2, VolumeX, GraduationCap } from 'lucide-react';
+import { StudentLevel, Language, StudentClass, STUDENT_CLASS_OPTIONS } from '../types';
+import { speakExplanation, stopSpeaking } from '../utils/voiceExplanation';
 
 interface StudentLearnProps {
   level: StudentLevel;
   t: (en: string, te: string) => string;
   onPractice: () => void;
+  language?: Language;
+  studentClass?: StudentClass;
 }
 
 interface MathTopic {
@@ -20,8 +23,45 @@ interface MathTopic {
   keyTakeawayTe: string;
 }
 
-export default function StudentLearn({ level, t, onPractice }: StudentLearnProps) {
+export default function StudentLearn({ level, t, onPractice, language = 'en', studentClass }: StudentLearnProps) {
   const [activeTab, setActiveTab] = useState<number>(0);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const currentClassMeta = studentClass ? STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass) : null;
+
+  useEffect(() => {
+    return () => {
+      stopSpeaking();
+    };
+  }, []);
+
+  useEffect(() => {
+    stopSpeaking();
+    setIsSpeaking(false);
+  }, [activeTab]);
+
+  const handleSpeakLesson = () => {
+    if (isSpeaking) {
+      stopSpeaking();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const title = language === 'te' ? currentTopic.titleTe : currentTopic.titleEn;
+    const summary = language === 'te' ? currentTopic.summaryTe : currentTopic.summaryEn;
+    const takeaway = language === 'te' ? currentTopic.keyTakeawayTe : currentTopic.keyTakeawayEn;
+    const textToSpeak = `${title}. ${summary}. ${
+      language === 'te' ? 'ముఖ్యమైన అంశం: ' : 'Key takeaway: '
+    }${takeaway}`;
+
+    speakExplanation(
+      textToSpeak,
+      language,
+      () => setIsSpeaking(true),
+      () => setIsSpeaking(false),
+      () => setIsSpeaking(false)
+    );
+  };
 
   const topicsByLevel: Record<StudentLevel, MathTopic[]> = {
     Beginner: [
@@ -158,9 +198,14 @@ export default function StudentLearn({ level, t, onPractice }: StudentLearnProps
   return (
     <div className="animate-in fade-in duration-500 max-w-4xl mx-auto pt-2 md:pt-4 space-y-8">
       <div>
-        <div className="inline-flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 px-3.5 py-1.5 rounded-full text-xs font-bold mb-3">
-          <BookOpen size={14} />
-          {level} {t('Curriculum Guide', 'పాఠ్యప్రణాళిక మార్గదర్శిని')}
+        <div className="inline-flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 px-3.5 py-1.5 rounded-full text-xs font-bold mb-3 shadow-xs border border-indigo-200/50 dark:border-indigo-900/50">
+          <GraduationCap size={14} />
+          <span>
+            {currentClassMeta
+              ? `${t(currentClassMeta.labelEn, currentClassMeta.labelTe)} • ${t(level, level === 'Beginner' ? 'ప్రారంభం' : level === 'Intermediate' ? 'మధ్యస్థం' : 'అధునాతనం')}`
+              : `${level}`}{' '}
+            {t('Curriculum Guide', 'పాఠ్యప్రణాళిక మార్గదర్శిని')}
+          </span>
         </div>
         <h1 className="text-3xl md:text-4xl font-extrabold text-neutral-900 dark:text-white tracking-tight mb-2">
           {t('Concepts & Step-by-Step Examples', 'భావనలు & దశలవారీ ఉదాహరణలు')}
@@ -189,13 +234,33 @@ export default function StudentLearn({ level, t, onPractice }: StudentLearnProps
 
       {/* Concept Deep Dive Card */}
       <div className="bg-white dark:bg-neutral-800 rounded-[32px] p-6 md:p-10 border border-black/5 dark:border-white/5 shadow-xs space-y-8">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 dark:text-white mb-2">
-            {t(currentTopic.titleEn, currentTopic.titleTe)}
-          </h2>
-          <p className="text-neutral-600 dark:text-neutral-300 text-base md:text-lg leading-relaxed">
-            {t(currentTopic.summaryEn, currentTopic.summaryTe)}
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 dark:text-white mb-2">
+              {t(currentTopic.titleEn, currentTopic.titleTe)}
+            </h2>
+            <p className="text-neutral-600 dark:text-neutral-300 text-base md:text-lg leading-relaxed">
+              {t(currentTopic.summaryEn, currentTopic.summaryTe)}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSpeakLesson}
+            className={`self-start sm:self-center shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-xs ${
+              isSpeaking
+                ? 'bg-amber-500 text-white animate-pulse'
+                : 'bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 border border-black/5 dark:border-white/10'
+            }`}
+            title={language === 'te' ? 'వాయిస్ ద్వారా పాఠం వినండి' : 'Listen to lesson explanation'}
+          >
+            {isSpeaking ? <VolumeX size={17} /> : <Volume2 size={17} />}
+            <span>
+              {isSpeaking
+                ? t('Stop Voice', 'ఆపండి')
+                : t('Listen to Lesson', 'పాఠం వినండి (వాయిస్)')}
+            </span>
+          </button>
         </div>
 
         {/* Worked Example */}
@@ -204,8 +269,21 @@ export default function StudentLearn({ level, t, onPractice }: StudentLearnProps
             <span className="text-xs font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-400">
               {t('Worked Example', 'పరిష్కరించిన ఉదాహరణ')}
             </span>
-            <span className="text-xs font-mono font-bold bg-neutral-200 dark:bg-neutral-600 px-3 py-1 rounded-full text-neutral-800 dark:text-neutral-200">
-              {currentTopic.exampleProblem}
+            <span className="text-sm font-mono font-bold bg-neutral-100 dark:bg-neutral-800 px-3.5 py-1.5 rounded-xl text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 flex items-center">
+              {currentTopic.exampleProblem.split(/([+\-−×÷=])/g).map((part, idx) => {
+                if (['+', '-', '−', '×', '÷', '='].includes(part)) {
+                  const displaySymbol = part === '-' ? '−' : part;
+                  return (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center justify-center px-2 py-0.5 mx-1 rounded-md bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 font-black text-xs shadow-xs border border-neutral-700 dark:border-neutral-300"
+                    >
+                      {displaySymbol}
+                    </span>
+                  );
+                }
+                return <span key={idx}>{part}</span>;
+              })}
             </span>
           </div>
 

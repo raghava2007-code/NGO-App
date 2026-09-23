@@ -2,18 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@media (pointer: fine) {
-  * {
-    cursor: none !important;
-  }
-}
-
-.custom-cursor-wrapper.is-hovering .cursor-ring {
-  transform: scale(1.6);
-  border-width: 1px;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
-}
-
 @layer base {
   body {
     @apply bg-app-bg text-app-text antialiased selection:bg-app-accent selection:text-black;

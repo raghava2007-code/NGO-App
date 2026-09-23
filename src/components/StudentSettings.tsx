@@ -1,5 +1,5 @@
-import { User, Award, LogOut, Globe } from 'lucide-react';
-import { StudentLevel, ThemeMode } from '../types';
+import { User, Award, LogOut, Globe, GraduationCap } from 'lucide-react';
+import { StudentLevel, ThemeMode, StudentClass, STUDENT_CLASS_OPTIONS } from '../types';
 import ThemeToggle from './ThemeToggle';
 
 interface StudentSettingsProps {
@@ -11,6 +11,7 @@ interface StudentSettingsProps {
   t: (en: string, te: string) => string;
   theme: ThemeMode;
   onToggleTheme: () => void;
+  studentClass?: StudentClass;
 }
 
 export default function StudentSettings({
@@ -22,7 +23,9 @@ export default function StudentSettings({
   t,
   theme,
   onToggleTheme,
+  studentClass,
 }: StudentSettingsProps) {
+  const currentClassMeta = studentClass ? STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass) : null;
   return (
     <div className="animate-in fade-in duration-300 max-w-2xl mx-auto pt-6">
       <div className="mb-8">
@@ -54,6 +57,26 @@ export default function StudentSettings({
             </div>
             <span className="text-xs font-semibold px-3 py-1 bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300 rounded-full">
               {t('Active Session', 'యాక్టివ్ సెషన్')}
+            </span>
+          </div>
+
+          {/* Enrolled Class Row */}
+          <div className="flex items-center justify-between border-b border-neutral-200/70 dark:border-neutral-600/70 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold">
+                <GraduationCap size={20} />
+              </div>
+              <div>
+                <span className="text-xs text-neutral-400 dark:text-neutral-400 font-semibold uppercase tracking-wider block">
+                  {t('Enrolled Class / Grade', 'నమోదైన తరగతి')}
+                </span>
+                <span className="text-xl font-bold text-neutral-900 dark:text-white">
+                  {currentClassMeta ? t(currentClassMeta.labelEn, currentClassMeta.labelTe) : (studentClass || 'Class 5')}
+                </span>
+              </div>
+            </div>
+            <span className="text-sm font-extrabold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/70 px-3 py-1 rounded-full border border-blue-200 dark:border-blue-800">
+              {currentClassMeta ? t(currentClassMeta.categoryEn, currentClassMeta.categoryTe) : 'School'}
             </span>
           </div>
 

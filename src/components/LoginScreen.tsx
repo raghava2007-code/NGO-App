@@ -1,22 +1,51 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Calculator, GraduationCap, Presentation, ArrowLeft, Check } from 'lucide-react';
+import { Eye, EyeOff, Calculator, GraduationCap, Presentation, ArrowLeft, Check, Globe, BookOpen } from 'lucide-react';
 import AnimatedLogo from './AnimatedLogo';
+import { Language, StudentClass, STUDENT_CLASS_OPTIONS } from '../types';
 
 export type UserRole = 'student' | 'teacher';
 export type StudentLevel = 'Beginner' | 'Intermediate' | 'Advanced';
 
 interface LoginScreenProps {
-  onLoginSuccess: (userData: { role: UserRole; username: string; level: StudentLevel }) => void;
+  onLoginSuccess: (userData: {
+    role: UserRole;
+    username: string;
+    level: StudentLevel;
+    subject?: string;
+    studentClass?: StudentClass;
+  }) => void;
   t: (en: string, te: string) => string;
+  language: Language;
+  setLanguage: (lang: Language) => void;
 }
 
-export default function LoginScreen({ onLoginSuccess, t }: LoginScreenProps) {
+export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }: LoginScreenProps) {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [teacherSubject, setTeacherSubject] = useState('Mathematics');
+  const [studentClass, setStudentClass] = useState<StudentClass | ''>(() => {
+    try {
+      const saved = localStorage.getItem('ganitmitra_student_class');
+      if (saved) return saved as StudentClass;
+    } catch {
+      // ignore
+    }
+    return '';
+  });
   const [level, setLevel] = useState<StudentLevel>('Beginner');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+
+  // Handle class selection with level auto-suggestion
+  const handleSelectClass = (selected: StudentClass) => {
+    setStudentClass(selected);
+    if (error) setError('');
+    const classOption = STUDENT_CLASS_OPTIONS.find((c) => c.value === selected);
+    if (classOption) {
+      setLevel(classOption.level);
+    }
+  };
 
   // Strict name validation function
   // Allowed: alphabetical characters (a-z, A-Z) and maximum a single period (.)
@@ -59,6 +88,11 @@ export default function LoginScreen({ onLoginSuccess, t }: LoginScreenProps) {
       return;
     }
 
+    if (!studentClass) {
+      setError(t('Please select which class you are in.', 'దయచేసి మీ తరగతిని ఎంచుకోండి (ఏ తరగతి?).'));
+      return;
+    }
+
     if (!level) {
       setError(t('Please select a level.', 'దయచేసి ఒక స్థాయిని ఎంచుకోండి.'));
       return;
@@ -68,6 +102,7 @@ export default function LoginScreen({ onLoginSuccess, t }: LoginScreenProps) {
       role: 'student',
       username: username.trim(),
       level: level,
+      studentClass: studentClass,
     });
   };
 
@@ -82,6 +117,7 @@ export default function LoginScreen({ onLoginSuccess, t }: LoginScreenProps) {
     }
 
     const trimmedUser = username.trim();
+    const finalSubject = teacherSubject.trim() || 'Mathematics';
 
     // Teacher authentication using prototype password pattern or teacher username
     if (password === '12345' || password === 'admin' || trimmedUser.toLowerCase() === 'teacher' || trimmedUser.toLowerCase() === 'admin') {
@@ -89,6 +125,7 @@ export default function LoginScreen({ onLoginSuccess, t }: LoginScreenProps) {
         role: 'teacher',
         username: trimmedUser || 'Teacher',
         level: 'Advanced',
+        subject: finalSubject,
       });
     } else {
       setError(t('Invalid teacher password. Hint: 12345', 'చెల్లని పాస్‌వర్డ్. సూచన: 12345'));
@@ -96,7 +133,47 @@ export default function LoginScreen({ onLoginSuccess, t }: LoginScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#2F2F2F] flex items-center justify-center p-4 md:p-8 font-sans text-[#F4F5F8]">
+    <div className="min-h-screen bg-[#2F2F2F] flex flex-col items-center justify-center p-4 md:p-8 font-sans text-[#F4F5F8] relative">
+      {/* Top Bar with Language Selector */}
+      <header className="w-full max-w-6xl flex justify-end items-center mb-4 sm:mb-6 px-1 z-20">
+        {/* Child-friendly Language Selector Displaying Language / భాష */}
+        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-white/15 shadow-md">
+          <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/90">
+            <Globe size={16} className="text-[#D4F670]" />
+            <span className="hidden sm:inline">Language / భాష</span>
+            <span className="sm:hidden">భాష</span>
+          </div>
+          <div className="flex items-center bg-black/40 p-1 rounded-xl gap-1">
+            <button
+              type="button"
+              onClick={() => setLanguage('en')}
+              className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                language === 'en'
+                  ? 'bg-[#D4F670] text-[#2F2F2F] shadow-sm font-extrabold'
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              }`}
+              aria-pressed={language === 'en'}
+            >
+              <span>English</span>
+              {language === 'en' && <Check size={13} strokeWidth={3} />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage('te')}
+              className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                language === 'te'
+                  ? 'bg-[#D4F670] text-[#2F2F2F] shadow-sm font-extrabold'
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              }`}
+              aria-pressed={language === 'te'}
+            >
+              <span>తెలుగు</span>
+              {language === 'te' && <Check size={13} strokeWidth={3} />}
+            </button>
+          </div>
+        </div>
+      </header>
+
       <div className="w-full max-w-6xl flex flex-col lg:flex-row bg-[#2F2F2F] rounded-[32px] md:rounded-[48px] overflow-hidden shadow-2xl border border-white/5 min-h-[600px]">
         
         {/* Left Panel - Visual/Branding (Hidden on mobile, visible on lg screens) */}
@@ -247,6 +324,91 @@ export default function LoginScreen({ onLoginSuccess, t }: LoginScreenProps) {
                     />
                   </div>
 
+                  {/* MANDATORY CLASS / GRADE SELECTION (Visual Button Grid Only - No Dropdown List) */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between ml-1">
+                      <label className="text-sm font-medium text-[#F4F5F8]/90 flex items-center gap-1.5">
+                        <BookOpen size={16} className="text-[#D4F670]" />
+                        <span>{t('Which class are you in?', 'మీరు ఏ తరగతి చదువుతున్నారు?')}</span>
+                        <span className="text-[#D4F670] font-bold">*</span>
+                      </label>
+                      {studentClass ? (
+                        <span className="text-xs font-bold text-[#1a1a1a] bg-[#D4F670] px-2.5 py-0.5 rounded-full shadow-xs flex items-center gap-1 animate-in fade-in">
+                          <Check size={12} strokeWidth={3} />
+                          {STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)
+                            ? t(
+                                STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)!.labelEn,
+                                STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)!.labelTe
+                              )
+                            : studentClass}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-semibold text-[#D4F670] bg-[#D4F670]/10 px-2 py-0.5 rounded-full border border-[#D4F670]/30">
+                          {t('Tap to choose', 'ఎంచుకోవడానికి నొక్కండి')}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Classes 1 to 10 Visual Grid */}
+                    <div className="p-3 bg-black/20 border border-white/10 rounded-2xl space-y-2.5">
+                      <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-neutral-400 px-1">
+                        <span>{t('Classes 1 – 10 (School)', '1 నుండి 10వ తరగతులు')}</span>
+                        <span className="text-[10px] text-neutral-500">{t('Tap your class', 'మీ తరగతిని నొక్కండి')}</span>
+                      </div>
+
+                      <div className="grid grid-cols-5 sm:grid-cols-5 gap-2">
+                        {STUDENT_CLASS_OPTIONS.filter((c) => !c.value.startsWith('Intermediate')).map((c) => {
+                          const isSelected = studentClass === c.value;
+                          return (
+                            <button
+                              key={c.value}
+                              type="button"
+                              onClick={() => handleSelectClass(c.value)}
+                              className={`py-2.5 px-1.5 rounded-xl font-bold transition-all flex flex-col items-center justify-center cursor-pointer border ${
+                                isSelected
+                                  ? 'bg-[#D4F670] text-[#1a1a1a] border-[#D4F670] shadow-md shadow-[#D4F670]/25 scale-105 ring-2 ring-[#D4F670]/50 z-10'
+                                  : 'bg-white/5 text-white/90 border-white/10 hover:bg-white/15 hover:border-white/30 active:scale-95'
+                              }`}
+                              title={t(c.labelEn, c.labelTe)}
+                            >
+                              <span className="text-base font-extrabold leading-none">{c.shortLabel}</span>
+                              <span className={`text-[10px] font-medium mt-1 leading-tight ${isSelected ? 'text-[#1a1a1a]/80 font-bold' : 'text-neutral-400'}`}>
+                                {t('Class', 'తరగతి')}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Intermediate 1st & 2nd Year Grid */}
+                      <div className="pt-1 border-t border-white/10">
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 px-1 mb-2">
+                          <span>{t('Higher Secondary (Intermediate)', 'ఇంటర్మీడియట్')}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {STUDENT_CLASS_OPTIONS.filter((c) => c.value.startsWith('Intermediate')).map((c) => {
+                            const isSelected = studentClass === c.value;
+                            return (
+                              <button
+                                key={c.value}
+                                type="button"
+                                onClick={() => handleSelectClass(c.value)}
+                                className={`py-2.5 px-3 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
+                                  isSelected
+                                    ? 'bg-[#D4F670] text-[#1a1a1a] border-[#D4F670] shadow-md shadow-[#D4F670]/25 font-bold ring-2 ring-[#D4F670]/50'
+                                    : 'bg-white/5 text-white/90 border-white/10 hover:bg-white/15 hover:border-white/30 active:scale-95'
+                                }`}
+                              >
+                                <span>{t(c.labelEn, c.labelTe)}</span>
+                                {isSelected && <Check size={14} className="stroke-[3] text-[#1a1a1a]" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Level Selection */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-[#F4F5F8]/80 ml-1 block">
@@ -354,6 +516,40 @@ export default function LoginScreen({ onLoginSuccess, t }: LoginScreenProps) {
                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                       </button>
                     </div>
+                  </div>
+
+                  {/* Which Subject Do You Teach? */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-[#F4F5F8]/80 ml-1 block">
+                      {t('Which Subject Do You Teach?', 'మీరు ఏ సబ్జెక్ట్ బోధిస్తారు?')}
+                    </label>
+                    <div className="flex flex-wrap gap-2 mb-1.5">
+                      {['Mathematics', 'Basic Arithmetic', 'Algebra & Geometry', 'Science & Math'].map((subj) => (
+                        <button
+                          key={subj}
+                          type="button"
+                          onClick={() => setTeacherSubject(subj)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                            teacherSubject === subj
+                              ? 'bg-[#D4F670] text-[#1a1a1a] border-[#D4F670] font-bold shadow-xs'
+                              : 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          {subj}
+                        </button>
+                      ))}
+                    </div>
+                    <input 
+                      type="text" 
+                      value={teacherSubject}
+                      onChange={(e) => {
+                        setTeacherSubject(e.target.value);
+                        if (error) setError('');
+                      }}
+                      placeholder={t('e.g. Mathematics, Science, etc.', 'ఉదా: గణితం, సైన్స్ మొదలైనవి')}
+                      required
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] transition-all outline-none text-white placeholder:text-white/30 text-base md:text-lg"
+                    />
                   </div>
 
                   {error && (
