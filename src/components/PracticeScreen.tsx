@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Check, X, HelpCircle, Volume2, VolumeX, Sparkles, GraduationCap } from 'lucide-react';
-import { StudentLevel, Language, StudentClass, STUDENT_CLASS_OPTIONS } from '../types';
+import { ArrowLeft, Check, X, HelpCircle, Volume2, VolumeX, Sparkles } from 'lucide-react';
+import { StudentLevel, Language, StudentClass } from '../types';
 import { speakExplanation, stopSpeaking } from '../utils/voiceExplanation';
 
 interface PracticeScreenProps {
@@ -23,9 +23,9 @@ interface QuestionItem {
 }
 
 /**
- * High-contrast, child-friendly mathematical symbol badge.
- * Provides maximum contrast (dark container in light mode, crisp white in dark mode)
- * with enlarged font size and generous spacing to eliminate ambiguity for young learners.
+ * Mathematical symbol component that matches number styling perfectly:
+ * Renders in high-contrast black in light mode and white in dark mode
+ * without any contrasting container pill or opposite-colored background box.
  */
 export const MathSymbolBadge = ({
   symbol,
@@ -39,7 +39,7 @@ export const MathSymbolBadge = ({
   if (size === 'normal') {
     return (
       <span
-        className="inline-flex items-center justify-center px-2.5 py-1 mx-1 rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 font-black text-base md:text-lg shadow-xs border border-neutral-800 dark:border-neutral-200 select-none"
+        className="inline-flex items-center justify-center font-bold text-neutral-900 dark:text-white mx-1 text-base md:text-lg select-none"
         aria-label={`Symbol ${displaySymbol}`}
       >
         {displaySymbol}
@@ -49,7 +49,7 @@ export const MathSymbolBadge = ({
 
   return (
     <span
-      className="inline-flex items-center justify-center min-w-[3.5rem] h-14 md:min-w-[4.5rem] md:h-20 px-3 md:px-4 mx-2 md:mx-3 rounded-2xl md:rounded-3xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 font-black text-3xl md:text-5xl shadow-md border-2 border-neutral-700 dark:border-neutral-300 select-none transform transition-transform hover:scale-105"
+      className="inline-flex items-center justify-center font-black text-neutral-900 dark:text-white mx-2 md:mx-4 text-4xl md:text-6xl select-none"
       aria-label={`Operation: ${displaySymbol}`}
     >
       {displaySymbol}
@@ -88,8 +88,8 @@ export default function PracticeScreen({
           operator: '+',
           operand2: '2',
           answer: '7',
-          hintEn: 'Count forward from 5... six, seven!',
-          hintTe: '5 నుండి ముందుకు లెక్కించండి... ఆరు, ఏడు!',
+          hintEn: 'Keep 5 in your mind, then count up 2 more on your fingers. What number do you reach?',
+          hintTe: '5 ని మనస్సులో ఉంచుకొని, చేతి వేళ్ళపై మరో 2 ముందుకు లెక్కించండి. ఎంత వస్తుంది?',
         },
         {
           problem: '6 + 3 = ?',
@@ -97,8 +97,8 @@ export default function PracticeScreen({
           operator: '+',
           operand2: '3',
           answer: '9',
-          hintEn: 'Count 3 more after 6: 7, 8, 9!',
-          hintTe: '6 తర్వాత మరో 3 లెక్కించండి: 7, 8, 9!',
+          hintEn: 'Start at 6 on the number line and jump forward 3 steps. Where do you land?',
+          hintTe: 'సంఖ్యా రేఖపై 6 వద్ద మొదలుపెట్టి 3 అడుగులు ముందుకు వేయండి. ఏ సంఖ్య వస్తుంది?',
         },
         {
           problem: '8 - 3 = ?',
@@ -106,8 +106,8 @@ export default function PracticeScreen({
           operator: '-',
           operand2: '3',
           answer: '5',
-          hintEn: 'Take away 3 from 8: 8, 7, 6 -> 5!',
-          hintTe: '8 నుండి 3 తీసివేయండి: 5 మిగులుతుంది!',
+          hintEn: 'Imagine you have 8 objects and remove 3 of them. Count how many are still left.',
+          hintTe: 'మీ వద్ద 8 వస్తువులు ఉంటే 3 తీసివేయండి. ఇంకా ఎన్ని మిగిలి ఉన్నాయో లెక్కించండి.',
         },
       ];
     }
@@ -120,8 +120,8 @@ export default function PracticeScreen({
           operator: '+',
           operand2: '18',
           answer: '42',
-          hintEn: 'Add units first: 4 + 8 = 12 (carry 1). Then 2 + 1 + 1 = 4 -> 42!',
-          hintTe: 'మొదట ఒకట్ల స్థానం కూడండి: 4 + 8 = 12. తర్వాత పదుల స్థానం: 42!',
+          hintEn: 'Split 18 into 10 and 8: first add 10 to 24, then add 8 to that result.',
+          hintTe: '18 ని 10 మరియు 8 గా విభజించండి: మొదట 24 కి 10 కలపండి, ఆపై 8 కలపండి.',
         },
         {
           problem: '12 × 5 = ?',
@@ -129,8 +129,8 @@ export default function PracticeScreen({
           operator: '×',
           operand2: '5',
           answer: '60',
-          hintEn: 'Think 10 × 5 = 50, and 2 × 5 = 10. 50 + 10 = 60!',
-          hintTe: '10 × 5 = 50 మరియు 2 × 5 = 10. మొత్తం 60!',
+          hintEn: 'Break 12 into (10 + 2): multiply 10 by 5, multiply 2 by 5, and then combine the two parts.',
+          hintTe: '12 ని (10 + 2) గా విభజించండి: 10 × 5 మరియు 2 × 5 చేసి ఆ రెండింటినీ కూడండి.',
         },
         {
           problem: '45 - 19 = ?',
@@ -138,8 +138,8 @@ export default function PracticeScreen({
           operator: '-',
           operand2: '19',
           answer: '26',
-          hintEn: 'Subtract 20 to get 25, then add 1 back: 26!',
-          hintTe: '45 నుండి 20 తీసివేసి 1 కలపండి: 26!',
+          hintEn: '19 is very close to 20! Try subtracting 20 from 45 first, then adjust by adding 1 back.',
+          hintTe: '19 అనేది 20 కి దగ్గరగా ఉంది! మొదట 45 నుండి 20 తీసివేసి, తర్వాత 1 కలపండి.',
         },
       ];
     }
@@ -152,8 +152,8 @@ export default function PracticeScreen({
           operator: '=',
           operand2: '28',
           answer: '10',
-          hintEn: 'Add 12 to both sides: 4x = 40. Then divide by 4: x = 10.',
-          hintTe: 'రెండు వైపులా 12 కలపండి: 4x = 40. ఆపై 4 తో భాగించండి: x = 10.',
+          hintEn: 'Isolate the x term: what inverse operation cancels subtracting 12? Then divide by 4.',
+          hintTe: 'x పదాన్ని వేరు చేయండి: -12 ను రద్దు చేయడానికి రెండు వైపులా 12 కలపండి, తర్వాత 4 తో భాగించండి.',
         },
         {
           problem: '5x + 15 = 45',
@@ -161,8 +161,8 @@ export default function PracticeScreen({
           operator: '=',
           operand2: '45',
           answer: '6',
-          hintEn: 'Subtract 15: 5x = 30. Then divide by 5: x = 6.',
-          hintTe: '15 తీసివేయండి: 5x = 30. ఆపై 5 తో భాగించండి: x = 6.',
+          hintEn: 'Keep the equation balanced: first subtract 15 from both sides, then divide by 5.',
+          hintTe: 'సమీకరణాన్ని సమతుల్యంగా ఉంచండి: మొదట రెండు వైపులా 15 తీసివేయండి, తర్వాత 5 తో భాగించండి.',
         },
         {
           problem: '8² - 14 = ?',
@@ -170,8 +170,8 @@ export default function PracticeScreen({
           operator: '-',
           operand2: '14',
           answer: '50',
-          hintEn: '8² = 64. Then 64 - 14 = 50.',
-          hintTe: '8² = 64. ఆపై 64 - 14 = 50.',
+          hintEn: 'Calculate 8 squared (8 multiplied by itself) first. Then subtract 14 from that result.',
+          hintTe: 'మొదట 8 వర్గాన్ని (8 × 8) లెక్కించండి. ఆ విలువ నుండి 14 తీసివేయండి.',
         },
       ];
     }
@@ -185,8 +185,8 @@ export default function PracticeScreen({
           operator: '+',
           operand2: '2',
           answer: '7',
-          hintEn: 'Count forward from 5... six, seven!',
-          hintTe: '5 నుండి ముందుకు లెక్కించండి... ఆరు, ఏడు!',
+          hintEn: 'Start at 5 on the number line and jump forward 2 steps. Where do you land?',
+          hintTe: 'సంఖ్యా రేఖపై 5 వద్ద మొదలుపెట్టి 2 అడుగులు ముందుకు వెళ్ళండి. ఎంత వస్తుంది?',
         },
         {
           problem: '9 + 4 = ?',
@@ -194,8 +194,8 @@ export default function PracticeScreen({
           operator: '+',
           operand2: '4',
           answer: '13',
-          hintEn: '9 needs 1 more to reach 10. Then add remaining 3: 10 + 3 = 13!',
-          hintTe: '9 కి 10 చేరుకోవడానికి 1 కావాలి. ఆపై మిగిలిన 3 కలపండి: 13!',
+          hintEn: '9 needs 1 more to reach 10. Borrow 1 from 4 to make 10, then see what remains.',
+          hintTe: '9 సంఖ్య 10 కావడానికి 1 కావాలి. 4 నుండి 1 తీసుకొని 10 చేయండి, తర్వాత మిగిలినది కలపండి.',
         },
         {
           problem: '12 - 5 = ?',
@@ -203,8 +203,8 @@ export default function PracticeScreen({
           operator: '-',
           operand2: '5',
           answer: '7',
-          hintEn: 'Subtract 2 to reach 10, then subtract 3 more: 10 - 3 = 7.',
-          hintTe: '10 చేరుకోవడానికి 2 తీసివేయండి, తర్వాత మరో 3 తీసివేయండి: 7.',
+          hintEn: 'Split 5 into 2 and 3: first subtract 2 to reach friendly 10, then take away the other 3.',
+          hintTe: '5 ని 2 మరియు 3 గా విభజించండి: మొదట 2 తీసివేసి 10 కి చేరుకోండి, తర్వాత మిగిలిన 3 తీసివేయండి.',
         },
       ],
       Intermediate: [
@@ -214,8 +214,8 @@ export default function PracticeScreen({
           operator: '×',
           operand2: '7',
           answer: '42',
-          hintEn: 'Think: 6 × 6 = 36, then add one more 6 to get 42.',
-          hintTe: '6 × 6 = 36, దానికి మరొక 6 కలపండి: 42.',
+          hintEn: 'Use a landmark you know: if 6 × 5 = 30, add two more groups of 6.',
+          hintTe: 'మీకు తెలిసిన ల్యాండ్‌మార్క్ ఉపయోగించండి: 6 × 5 = 30 అయితే, దానికి మరో రెండు 6 లను కలపండి.',
         },
         {
           problem: '48 ÷ 6 = ?',
@@ -223,8 +223,8 @@ export default function PracticeScreen({
           operator: '÷',
           operand2: '6',
           answer: '8',
-          hintEn: 'What number multiplied by 6 equals 48? Think 6 × 8 = 48!',
-          hintTe: '6 తో ఏ సంఖ్యను గుణిస్తే 48 వస్తుంది? 6 × 8 = 48.',
+          hintEn: 'Think backwards with times tables: which number, when multiplied by 6, gives 48?',
+          hintTe: 'ఎక్కాలను రివర్స్‌లో ఆలోచించండి: 6 ని ఏ సంఖ్యతో గుణిస్తే 48 వస్తుంది?',
         },
         {
           problem: '15 × 4 = ?',
@@ -232,8 +232,8 @@ export default function PracticeScreen({
           operator: '×',
           operand2: '4',
           answer: '60',
-          hintEn: 'Double 15 is 30, and double 30 is 60!',
-          hintTe: '15 ని రెట్టింపు చేస్తే 30, 30 ని రెట్టింపు చేస్తే 60!',
+          hintEn: 'Try the double-and-double trick: double 15 once, then double that number again!',
+          hintTe: 'రెట్టింపు వ్యూహాన్ని ఉపయోగించండి: 15 ని రెట్టింపు చేసి, వచ్చిన ఫలితాన్ని మరోసారి రెట్టింపు చేయండి!',
         },
       ],
       Advanced: [
@@ -243,8 +243,8 @@ export default function PracticeScreen({
           operator: '=',
           operand2: '21',
           answer: '7',
-          hintEn: 'Divide both sides by 3: 21 / 3 = 7.',
-          hintTe: 'రెండు వైపులా 3 తో భాగించండి: 21 / 3 = 7.',
+          hintEn: 'Since 3 is multiplied by x, apply the inverse operation: divide both sides by 3.',
+          hintTe: '3 అనేది x తో గుణించబడి ఉంది కాబట్టి, రెండు వైపులా 3 తో భాగించి x విలువను కనుగొనండి.',
         },
         {
           problem: '2x + 4 = 16',
@@ -252,8 +252,8 @@ export default function PracticeScreen({
           operator: '=',
           operand2: '16',
           answer: '6',
-          hintEn: 'First subtract 4 (2x = 12), then divide by 2: x = 6.',
-          hintTe: 'మొదట 4 తీసివేయండి (2x = 12), తర్వాత 2 తో భాగించండి: x = 6.',
+          hintEn: 'Follow inverse operations: first subtract 4 from both sides, then divide by 2.',
+          hintTe: 'వ్యతిరేక క్రమంలో చేయండి: మొదట రెండు వైపులా 4 తీసివేయండి, తర్వాత 2 తో భాగించండి.',
         },
         {
           problem: '8² - 14 = ?',
@@ -261,8 +261,8 @@ export default function PracticeScreen({
           operator: '-',
           operand2: '14',
           answer: '50',
-          hintEn: '8² = 64. Then 64 - 14 = 50.',
-          hintTe: '8² = 64. ఆపై 64 - 14 = 50.',
+          hintEn: 'Find the product of 8 × 8 first, then subtract 14 from that total.',
+          hintTe: 'మొదట 8 × 8 విలువను లెక్కించి, ఆ మొత్తం నుండి 14 తీసివేయండి.',
         },
       ],
     };
@@ -356,18 +356,11 @@ export default function PracticeScreen({
           </button>
         </div>
 
-        {/* Level & Class badge and interactive voice explanation button */}
+        {/* Question Number & interactive voice explanation button */}
         <div className="flex items-center justify-center gap-3 mb-8 md:mb-10 mt-2 md:mt-0 flex-wrap">
-          <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-full font-semibold text-sm shadow-xs border border-blue-200/50 dark:border-blue-900/50">
-            <GraduationCap size={16} />
+          <div className="inline-flex items-center gap-2 bg-neutral-100 dark:bg-neutral-700/60 text-neutral-800 dark:text-neutral-200 px-4 py-2 rounded-full font-bold text-sm shadow-xs border border-black/5 dark:border-white/10">
             <span>
-              {studentClass
-                ? `${t(
-                    STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)?.labelEn || studentClass,
-                    STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)?.labelTe || studentClass
-                  )} • ${t(level, level === 'Beginner' ? 'ప్రారంభం' : level === 'Intermediate' ? 'మధ్యస్థం' : 'అధునాతనం')}`
-                : `${level}`}{' '}
-              {t('Practice Drill', 'సాధన డ్రిల్')} • Q{currentIndex + 1}
+              {t('Question', 'ప్రశ్న')} {currentIndex + 1}
             </span>
           </div>
 

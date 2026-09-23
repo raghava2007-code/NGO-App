@@ -307,13 +307,62 @@ function App() {
             )}
           </div>
 
-          {/* Sidebar Footer with Logout */}
-          <div className="p-6 pb-12 md:pb-6">
+          {/* Sidebar Footer with Selected Tags just above Log Out */}
+          <div className="p-6 pb-12 md:pb-6 mt-auto flex flex-col gap-3">
+            {/* Selected Tags placed at bottom left of the sidebar */}
+            {!isTeacher && (
+              <div className="p-3.5 rounded-2xl bg-white/10 border border-white/10 text-left select-none space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-[#D4F670] text-[#1a1a1a] font-extrabold text-xs flex items-center justify-center shrink-0">
+                      {username ? username.charAt(0).toUpperCase() : 'S'}
+                    </div>
+                    <span className="text-sm font-bold text-white truncate">
+                      {username || 'Student'}
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#D4F670] text-[#1a1a1a] shrink-0">
+                    {t('Class', 'తరగతి')} {STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)?.shortLabel || studentClass.replace('Class ', '')}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/15 text-white/90">
+                    {t(studentLevel, studentLevel === 'Beginner' ? 'ప్రారంభం' : studentLevel === 'Intermediate' ? 'మధ్యస్థం' : 'అధునాతనం')}
+                  </span>
+                  <span className="text-[10px] font-medium text-neutral-300">
+                    {STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)
+                      ? t(
+                          STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)!.categoryEn,
+                          STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)!.categoryTe
+                        )
+                      : 'School'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {isTeacher && (
+              <div className="p-3.5 rounded-2xl bg-white/10 border border-white/10 text-left select-none">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-sm font-bold text-white truncate">
+                    {username || t('Teacher', 'ఉపాధ్యాయుడు')}
+                  </span>
+                  <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-[#D4F670] text-[#1a1a1a]">
+                    {teacherSubject}
+                  </span>
+                </div>
+                <span className="text-[10px] text-neutral-300 font-medium">
+                  {t('Educator Portal', 'ఉపాధ్యాయ పోర్టల్')}
+                </span>
+              </div>
+            )}
+
             <button
               onClick={handleLogout}
-              className="flex items-center gap-4 px-5 py-4 w-full rounded-full transition-all text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer font-medium"
+              className="flex items-center gap-4 px-5 py-3.5 w-full rounded-full transition-all text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer font-medium text-sm"
             >
-              <LogOut size={20} />
+              <LogOut size={18} />
               <span>{t('Log Out', 'లాగౌట్')}</span>
             </button>
           </div>
@@ -329,22 +378,9 @@ function App() {
               {/* User Profile Info & Mobile Actions */}
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="font-bold text-base md:text-lg leading-tight text-neutral-900 dark:text-white flex items-center gap-2">
-                    <span>{username || (isTeacher ? t('Teacher', 'ఉపాధ్యాయుడు') : t('Student', 'విద్యార్థి'))}</span>
-                    {!isTeacher && (
-                      <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#D4F670] text-[#1a1a1a] shadow-xs">
-                        {t('Class', 'తరగతి')} {STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)?.shortLabel || studentClass.replace('Class ', '')}
-                      </span>
-                    )}
+                  <h2 className="font-bold text-base md:text-lg leading-tight text-neutral-900 dark:text-white">
+                    {username || (isTeacher ? t('Teacher', 'ఉపాధ్యాయుడు') : t('Student', 'విద్యార్థి'))}
                   </h2>
-                  <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mt-0.5">
-                    {isTeacher
-                      ? t(`${teacherSubject} Educator`, `${teacherSubject} ఉపాధ్యాయుడు`)
-                      : t(
-                          `Student: ${username || 'Learner'} | Class: ${STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)?.shortLabel || studentClass.replace('Class ', '')}`,
-                          `విద్యార్థి: ${username || 'విద్యార్థి'} | తరగతి: ${STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)?.shortLabel || studentClass.replace('Class ', '')}`
-                        )}
-                  </p>
                 </div>
 
                 {/* Mobile Quick Action Buttons */}
