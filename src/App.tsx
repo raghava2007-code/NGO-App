@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, BookOpen, Bell, X, TrendingUp, LogOut, Settings, PlayCircle, ClipboardList, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, Bell, X, TrendingUp, LogOut, Settings, PlayCircle, ClipboardList, ArrowRight, CheckCircle2, GraduationCap } from 'lucide-react';
 import StudentDashboard from './components/StudentDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import PracticeScreen from './components/PracticeScreen';
@@ -308,29 +308,36 @@ function App() {
           </div>
 
           {/* Sidebar Footer with Selected Tags just above Log Out */}
-          <div className="p-6 pb-12 md:pb-6 mt-auto flex flex-col gap-3">
+          <div className="p-4 sm:p-5 md:p-6 pb-10 sm:pb-8 md:pb-6 mt-auto flex flex-col gap-3">
             {/* Selected Tags placed at bottom left of the sidebar */}
             {!isTeacher && (
-              <div className="p-3.5 rounded-2xl bg-white/10 border border-white/10 text-left select-none space-y-2">
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10 text-left select-none space-y-2 md:space-y-2.5 transition-all">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-[#D4F670] text-[#1a1a1a] font-extrabold text-xs flex items-center justify-center shrink-0">
+                  <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#D4F670] text-[#1a1a1a] font-extrabold text-xs sm:text-sm flex items-center justify-center shrink-0 shadow-xs">
                       {username ? username.charAt(0).toUpperCase() : 'S'}
                     </div>
-                    <span className="text-sm font-bold text-white truncate">
+                    <span className="text-xs sm:text-sm font-bold text-white truncate max-w-[100px] sm:max-w-[120px] md:max-w-[110px]">
                       {username || 'Student'}
                     </span>
                   </div>
-                  <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#D4F670] text-[#1a1a1a] shrink-0">
-                    {t('Class', 'తరగతి')} {STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)?.shortLabel || studentClass.replace('Class ', '')}
+                  <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-black px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg bg-[#D4F670] text-[#1a1a1a] shrink-0 shadow-xs">
+                    <GraduationCap size={13} className="shrink-0" />
+                    <span>
+                      {STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)
+                        ? (language === 'te'
+                            ? STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)!.labelTe
+                            : STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)!.labelEn)
+                        : studentClass}
+                    </span>
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/15 text-white/90">
+                <div className="flex items-center gap-1.5 flex-wrap pt-0.5 border-t border-white/10">
+                  <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md bg-white/15 text-white/90">
                     {t(studentLevel, studentLevel === 'Beginner' ? 'ప్రారంభం' : studentLevel === 'Intermediate' ? 'మధ్యస్థం' : 'అధునాతనం')}
                   </span>
-                  <span className="text-[10px] font-medium text-neutral-300">
+                  <span className="text-[10px] sm:text-[11px] font-medium text-neutral-300">
                     {STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)
                       ? t(
                           STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)!.categoryEn,
@@ -343,16 +350,16 @@ function App() {
             )}
 
             {isTeacher && (
-              <div className="p-3.5 rounded-2xl bg-white/10 border border-white/10 text-left select-none">
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-white/10 border border-white/10 text-left select-none">
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="text-sm font-bold text-white truncate">
+                  <span className="text-xs sm:text-sm font-bold text-white truncate">
                     {username || t('Teacher', 'ఉపాధ్యాయుడు')}
                   </span>
                   <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-[#D4F670] text-[#1a1a1a]">
                     {teacherSubject}
                   </span>
                 </div>
-                <span className="text-[10px] text-neutral-300 font-medium">
+                <span className="text-[10px] sm:text-[11px] text-neutral-300 font-medium">
                   {t('Educator Portal', 'ఉపాధ్యాయ పోర్టల్')}
                 </span>
               </div>

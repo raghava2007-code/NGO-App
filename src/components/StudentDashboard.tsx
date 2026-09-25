@@ -1,5 +1,5 @@
-import { ArrowRight, BookOpen, Lightbulb, PlayCircle, Clock, Sparkles, GraduationCap } from 'lucide-react';
-import { StudentLevel, AssignedTask, StudentClass, STUDENT_CLASS_OPTIONS } from '../types';
+import { ArrowRight, BookOpen, Lightbulb, PlayCircle, Clock, Sparkles } from 'lucide-react';
+import { StudentLevel, AssignedTask, StudentClass } from '../types';
 
 interface StudentDashboardProps {
   t: (en: string, te: string) => string;
@@ -21,8 +21,8 @@ export default function StudentDashboard({
   taskProgress,
   assignedTasks = [],
   onSelectAssignedTask,
-  studentName,
-  studentClass = 'Class 5',
+  studentName: _studentName,
+  studentClass: _studentClass = 'Class 5',
 }: StudentDashboardProps) {
   // Filter tasks assigned to either "All" or specifically to this student's level
   const relevantTeacherTasks = assignedTasks.filter(
@@ -64,52 +64,8 @@ export default function StudentDashboard({
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (taskProgress / 100) * circumference;
 
-  const currentClassMeta = STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass);
-
   return (
     <div className="animate-in fade-in duration-500 max-w-5xl mx-auto pt-2 md:pt-4 space-y-6 md:space-y-8">
-      
-      {/* STUDENT DASHBOARD PROFILE HEADER (e.g. Student: Rahul | Class: 6) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 md:p-6 rounded-[28px] bg-white dark:bg-neutral-800/90 border border-black/5 dark:border-white/10 shadow-sm transition-colors">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#D4F670] text-[#1a1a1a] font-black flex items-center justify-center text-xl shadow-xs">
-            {(studentName || 'Student').charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <div className="flex items-center flex-wrap gap-2 text-base md:text-lg">
-              <span className="font-extrabold text-neutral-900 dark:text-white">
-                {t('Student: ', 'విద్యార్థి: ')}
-                <span className="text-black dark:text-white font-bold">{studentName || t('Student', 'విద్యార్థి')}</span>
-              </span>
-              <span className="text-neutral-300 dark:text-neutral-600 font-bold">|</span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs md:text-sm font-extrabold">
-                <GraduationCap size={14} className="shrink-0" />
-                <span>
-                  {t('Class: ', 'తరగతి: ')}
-                  <span className="font-black">
-                    {currentClassMeta ? (t('en', 'te') === 'en' ? currentClassMeta.shortLabel : currentClassMeta.labelTe) : studentClass.replace('Class ', '')}
-                  </span>
-                </span>
-              </span>
-            </div>
-            <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mt-1 flex items-center gap-2">
-              <span>{currentClassMeta ? t(currentClassMeta.labelEn, currentClassMeta.labelTe) : studentClass}</span>
-              <span>•</span>
-              <span className="capitalize">{currentClassMeta ? t(currentClassMeta.categoryEn, currentClassMeta.categoryTe) : ''}</span>
-              <span>•</span>
-              <span>{t(`${level} Syllabus`, `${level === 'Beginner' ? 'ప్రారంభ' : level === 'Intermediate' ? 'మధ్యస్థ' : 'అధునాతన'} సిలబస్`)}</span>
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4F670]/20 text-[#24350c] dark:text-[#D4F670] border border-[#D4F670]/40 text-xs font-bold">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>{t('Active Session', 'యాక్టివ్ సెషన్')}</span>
-          </div>
-        </div>
-      </div>
-
       {/* Current Task Card featuring the ONE SINGLE CIRCULAR PROGRESS INDICATOR */}
       <div className="bg-app-darkCard text-white p-6 md:p-10 rounded-[32px] md:rounded-[40px] shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-8 relative overflow-hidden">
         
