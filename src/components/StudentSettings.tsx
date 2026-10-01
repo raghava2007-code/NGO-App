@@ -51,7 +51,7 @@ export default function StudentSettings({
                   {t('Username / Name', 'వినియోగదారు పేరు / పేరు')}
                 </span>
                 <span className="text-xl font-bold text-neutral-900 dark:text-white">
-                  {username || 'Student'}
+                  {username || t('Student', 'విద్యార్థి')}
                 </span>
               </div>
             </div>
@@ -76,7 +76,7 @@ export default function StudentSettings({
               </div>
             </div>
             <span className="text-sm font-extrabold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/70 px-3 py-1 rounded-full border border-blue-200 dark:border-blue-800">
-              {currentClassMeta ? t(currentClassMeta.categoryEn, currentClassMeta.categoryTe) : 'School'}
+              {currentClassMeta ? t(currentClassMeta.categoryEn, currentClassMeta.categoryTe) : t('School', 'పాఠశాల')}
             </span>
           </div>
 

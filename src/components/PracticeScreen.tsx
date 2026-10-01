@@ -1,7 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Check, X, HelpCircle, Volume2, VolumeX, Sparkles } from 'lucide-react';
-import { StudentLevel, Language, StudentClass } from '../types';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Check, X, Volume2, VolumeX, Sparkles, PlayCircle, BookOpen, CheckCircle2, RotateCcw, TrendingUp } from 'lucide-react';
+import { StudentLevel, Language, StudentClass, CompletedTestRecord } from '../types';
 import { speakExplanation, stopSpeaking } from '../utils/voiceExplanation';
+import { CHAPTERS_DATA, ChapterData, TestQuestionItem } from '../data/curriculumData';
+import { saveCompletedTest } from '../utils/testStorage';
+import MathDiagram from './MathDiagram';
 
 interface PracticeScreenProps {
   t: (en: string, te: string) => string;
@@ -10,66 +13,69 @@ interface PracticeScreenProps {
   language?: Language;
   onProgressIncrement?: () => void;
   studentClass?: StudentClass;
+  selectedChapterId?: string;
+  onNavigateToProgress?: () => void;
+  studentName?: string;
 }
 
-interface QuestionItem {
-  problem: string;
-  operand1: string;
-  operator: string;
-  operand2: string;
-  answer: string;
-  hintEn: string;
-  hintTe: string;
-}
-
-/**
- * Mathematical symbol component that matches number styling perfectly:
- * Renders in high-contrast black in light mode and white in dark mode
- * without any contrasting container pill or opposite-colored background box.
- */
-export const MathSymbolBadge = ({
-  symbol,
-  size = 'large',
-}: {
-  symbol: string;
-  size?: 'normal' | 'large';
-}) => {
-  const displaySymbol = symbol === '-' ? '−' : symbol;
-  
-  if (size === 'normal') {
-    return (
-      <span
-        className="inline-flex items-center justify-center font-bold text-neutral-900 dark:text-white mx-1 text-base md:text-lg select-none"
-        aria-label={`Symbol ${displaySymbol}`}
-      >
-        {displaySymbol}
-      </span>
-    );
-  }
-
-  return (
-    <span
-      className="inline-flex items-center justify-center font-black text-neutral-900 dark:text-white mx-2 md:mx-4 text-4xl md:text-6xl select-none"
-      aria-label={`Operation: ${displaySymbol}`}
-    >
-      {displaySymbol}
-    </span>
-  );
-};
+export type TestFlowState = 'pre_test_summary' | 'taking_test' | 'test_completed';
 
 export default function PracticeScreen({
   t,
   onBack,
-  level,
+  level: _level,
   language = 'en',
   onProgressIncrement,
-  studentClass,
+  studentClass = 'Class 1',
+  selectedChapterId,
+  onNavigateToProgress,
+  studentName = 'Student',
 }: PracticeScreenProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answer, setAnswer] = useState('');
-  const [status, setStatus] = useState<'idle' | 'correct' | 'incorrect'>('idle');
-  const [showHint, setShowHint] = useState(false);
+  // Available chapters for the student's class
+  const classChapters = CHAPTERS_DATA.filter((ch) => ch.classLevel === studentClass);
+  const activeList = classChapters.length > 0 ? classChapters : CHAPTERS_DATA;
+
+  // Selected Chapter for Test
+  const [activeChapterId, setActiveChapterId] = useState<string>(() => {
+    if (selectedChapterId && activeList.some((ch) => ch.id === selectedChapterId)) {
+      return selectedChapterId;
+    }
+    return activeList[0]?.id || 'c1-ch1';
+  });
+
+  // Test Flow State:
+  // 1. 'pre_test_summary': Displays Pre-Test Topic Summary Card & "Start Test" Button
+  // 2. 'taking_test': Fill-in-the-blank assessment questions supported by graphics & diagrams
+  // 3. 'test_completed': Results card with score and teacher synchronization
+  const [flowState, setFlowState] = useState<TestFlowState>('pre_test_summary');
+
+  // Test Execution State
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [userAnswer, setUserAnswer] = useState('');
+  const [answerStatus, setAnswerStatus] = useState<'idle' | 'correct' | 'incorrect'>('idle');
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Collected Answers for Test Record
+  const [userAnswersList, setUserAnswersList] = useState<{
+    questionPrompt: string;
+    studentAnswer: string;
+    correctAnswer: string;
+    isCorrect: boolean;
+  }[]>([]);
+
+  // Score summary
+  const [finalScore, setFinalScore] = useState<{ score: number; total: number; percentage: number }>({
+    score: 0,
+    total: 0,
+    percentage: 0,
+  });
+
+  // Current active chapter object
+  const currentChapter: ChapterData =
+    activeList.find((ch) => ch.id === activeChapterId) || activeList[0] || CHAPTERS_DATA[0];
+
+  const questions: TestQuestionItem[] = currentChapter.testQuestions || [];
+  const currentQuestion: TestQuestionItem | undefined = questions[questionIndex];
 
   // Stop speech when component unmounts
   useEffect(() => {
@@ -78,222 +84,32 @@ export default function PracticeScreen({
     };
   }, []);
 
-  // Class-specific dynamically filtered questions
-  const classQuestions = useMemo((): QuestionItem[] => {
-    if (studentClass === 'Class 1' || studentClass === 'Class 2') {
-      return [
-        {
-          problem: '5 + 2 = ?',
-          operand1: '5',
-          operator: '+',
-          operand2: '2',
-          answer: '7',
-          hintEn: 'Keep 5 in your mind, then count up 2 more on your fingers. What number do you reach?',
-          hintTe: '5 ని మనస్సులో ఉంచుకొని, చేతి వేళ్ళపై మరో 2 ముందుకు లెక్కించండి. ఎంత వస్తుంది?',
-        },
-        {
-          problem: '6 + 3 = ?',
-          operand1: '6',
-          operator: '+',
-          operand2: '3',
-          answer: '9',
-          hintEn: 'Start at 6 on the number line and jump forward 3 steps. Where do you land?',
-          hintTe: 'సంఖ్యా రేఖపై 6 వద్ద మొదలుపెట్టి 3 అడుగులు ముందుకు వేయండి. ఏ సంఖ్య వస్తుంది?',
-        },
-        {
-          problem: '8 - 3 = ?',
-          operand1: '8',
-          operator: '-',
-          operand2: '3',
-          answer: '5',
-          hintEn: 'Imagine you have 8 objects and remove 3 of them. Count how many are still left.',
-          hintTe: 'మీ వద్ద 8 వస్తువులు ఉంటే 3 తీసివేయండి. ఇంకా ఎన్ని మిగిలి ఉన్నాయో లెక్కించండి.',
-        },
-      ];
+  // Update active chapter if selectedChapterId prop updates
+  useEffect(() => {
+    if (selectedChapterId && activeList.some((ch) => ch.id === selectedChapterId)) {
+      setActiveChapterId(selectedChapterId);
+      setFlowState('pre_test_summary');
+      setQuestionIndex(0);
+      setUserAnswer('');
+      setAnswerStatus('idle');
+      setUserAnswersList([]);
     }
+  }, [selectedChapterId]);
 
-    if (studentClass === 'Class 3' || studentClass === 'Class 4' || studentClass === 'Class 5') {
-      return [
-        {
-          problem: '24 + 18 = ?',
-          operand1: '24',
-          operator: '+',
-          operand2: '18',
-          answer: '42',
-          hintEn: 'Split 18 into 10 and 8: first add 10 to 24, then add 8 to that result.',
-          hintTe: '18 ని 10 మరియు 8 గా విభజించండి: మొదట 24 కి 10 కలపండి, ఆపై 8 కలపండి.',
-        },
-        {
-          problem: '12 × 5 = ?',
-          operand1: '12',
-          operator: '×',
-          operand2: '5',
-          answer: '60',
-          hintEn: 'Break 12 into (10 + 2): multiply 10 by 5, multiply 2 by 5, and then combine the two parts.',
-          hintTe: '12 ని (10 + 2) గా విభజించండి: 10 × 5 మరియు 2 × 5 చేసి ఆ రెండింటినీ కూడండి.',
-        },
-        {
-          problem: '45 - 19 = ?',
-          operand1: '45',
-          operator: '-',
-          operand2: '19',
-          answer: '26',
-          hintEn: '19 is very close to 20! Try subtracting 20 from 45 first, then adjust by adding 1 back.',
-          hintTe: '19 అనేది 20 కి దగ్గరగా ఉంది! మొదట 45 నుండి 20 తీసివేసి, తర్వాత 1 కలపండి.',
-        },
-      ];
-    }
-
-    if (studentClass === 'Intermediate 1st Year' || studentClass === 'Intermediate 2nd Year') {
-      return [
-        {
-          problem: '4x - 12 = 28',
-          operand1: '4x - 12',
-          operator: '=',
-          operand2: '28',
-          answer: '10',
-          hintEn: 'Isolate the x term: what inverse operation cancels subtracting 12? Then divide by 4.',
-          hintTe: 'x పదాన్ని వేరు చేయండి: -12 ను రద్దు చేయడానికి రెండు వైపులా 12 కలపండి, తర్వాత 4 తో భాగించండి.',
-        },
-        {
-          problem: '5x + 15 = 45',
-          operand1: '5x + 15',
-          operator: '=',
-          operand2: '45',
-          answer: '6',
-          hintEn: 'Keep the equation balanced: first subtract 15 from both sides, then divide by 5.',
-          hintTe: 'సమీకరణాన్ని సమతుల్యంగా ఉంచండి: మొదట రెండు వైపులా 15 తీసివేయండి, తర్వాత 5 తో భాగించండి.',
-        },
-        {
-          problem: '8² - 14 = ?',
-          operand1: '8²',
-          operator: '-',
-          operand2: '14',
-          answer: '50',
-          hintEn: 'Calculate 8 squared (8 multiplied by itself) first. Then subtract 14 from that result.',
-          hintTe: 'మొదట 8 వర్గాన్ని (8 × 8) లెక్కించండి. ఆ విలువ నుండి 14 తీసివేయండి.',
-        },
-      ];
-    }
-
-    // Default questions by standard level (Classes 6-10 and fallbacks)
-    const questionsByLevel: Record<StudentLevel, QuestionItem[]> = {
-      Beginner: [
-        {
-          problem: '5 + 2 = ?',
-          operand1: '5',
-          operator: '+',
-          operand2: '2',
-          answer: '7',
-          hintEn: 'Start at 5 on the number line and jump forward 2 steps. Where do you land?',
-          hintTe: 'సంఖ్యా రేఖపై 5 వద్ద మొదలుపెట్టి 2 అడుగులు ముందుకు వెళ్ళండి. ఎంత వస్తుంది?',
-        },
-        {
-          problem: '9 + 4 = ?',
-          operand1: '9',
-          operator: '+',
-          operand2: '4',
-          answer: '13',
-          hintEn: '9 needs 1 more to reach 10. Borrow 1 from 4 to make 10, then see what remains.',
-          hintTe: '9 సంఖ్య 10 కావడానికి 1 కావాలి. 4 నుండి 1 తీసుకొని 10 చేయండి, తర్వాత మిగిలినది కలపండి.',
-        },
-        {
-          problem: '12 - 5 = ?',
-          operand1: '12',
-          operator: '-',
-          operand2: '5',
-          answer: '7',
-          hintEn: 'Split 5 into 2 and 3: first subtract 2 to reach friendly 10, then take away the other 3.',
-          hintTe: '5 ని 2 మరియు 3 గా విభజించండి: మొదట 2 తీసివేసి 10 కి చేరుకోండి, తర్వాత మిగిలిన 3 తీసివేయండి.',
-        },
-      ],
-      Intermediate: [
-        {
-          problem: '6 × 7 = ?',
-          operand1: '6',
-          operator: '×',
-          operand2: '7',
-          answer: '42',
-          hintEn: 'Use a landmark you know: if 6 × 5 = 30, add two more groups of 6.',
-          hintTe: 'మీకు తెలిసిన ల్యాండ్‌మార్క్ ఉపయోగించండి: 6 × 5 = 30 అయితే, దానికి మరో రెండు 6 లను కలపండి.',
-        },
-        {
-          problem: '48 ÷ 6 = ?',
-          operand1: '48',
-          operator: '÷',
-          operand2: '6',
-          answer: '8',
-          hintEn: 'Think backwards with times tables: which number, when multiplied by 6, gives 48?',
-          hintTe: 'ఎక్కాలను రివర్స్‌లో ఆలోచించండి: 6 ని ఏ సంఖ్యతో గుణిస్తే 48 వస్తుంది?',
-        },
-        {
-          problem: '15 × 4 = ?',
-          operand1: '15',
-          operator: '×',
-          operand2: '4',
-          answer: '60',
-          hintEn: 'Try the double-and-double trick: double 15 once, then double that number again!',
-          hintTe: 'రెట్టింపు వ్యూహాన్ని ఉపయోగించండి: 15 ని రెట్టింపు చేసి, వచ్చిన ఫలితాన్ని మరోసారి రెట్టింపు చేయండి!',
-        },
-      ],
-      Advanced: [
-        {
-          problem: '3x = 21',
-          operand1: '3x',
-          operator: '=',
-          operand2: '21',
-          answer: '7',
-          hintEn: 'Since 3 is multiplied by x, apply the inverse operation: divide both sides by 3.',
-          hintTe: '3 అనేది x తో గుణించబడి ఉంది కాబట్టి, రెండు వైపులా 3 తో భాగించి x విలువను కనుగొనండి.',
-        },
-        {
-          problem: '2x + 4 = 16',
-          operand1: '2x + 4',
-          operator: '=',
-          operand2: '16',
-          answer: '6',
-          hintEn: 'Follow inverse operations: first subtract 4 from both sides, then divide by 2.',
-          hintTe: 'వ్యతిరేక క్రమంలో చేయండి: మొదట రెండు వైపులా 4 తీసివేయండి, తర్వాత 2 తో భాగించండి.',
-        },
-        {
-          problem: '8² - 14 = ?',
-          operand1: '8²',
-          operator: '-',
-          operand2: '14',
-          answer: '50',
-          hintEn: 'Find the product of 8 × 8 first, then subtract 14 from that total.',
-          hintTe: 'మొదట 8 × 8 విలువను లెక్కించి, ఆ మొత్తం నుండి 14 తీసివేయండి.',
-        },
-      ],
-    };
-
-    return questionsByLevel[level] || questionsByLevel.Beginner;
-  }, [studentClass, level]);
-
-  const list = classQuestions;
-  const currentQ = list[currentIndex] || list[0];
-
-  const handleSpeak = () => {
+  // Voice narration for question
+  const handleSpeakQuestion = () => {
     if (isSpeaking) {
       stopSpeaking();
       setIsSpeaking(false);
       return;
     }
 
-    const opSymbol = currentQ.operator === '-' ? 'minus' : currentQ.operator === '+' ? 'plus' : currentQ.operator === '×' ? 'times' : currentQ.operator === '÷' ? 'divided by' : 'equals';
-    const opTelugu = currentQ.operator === '-' ? 'తీసివేత' : currentQ.operator === '+' ? 'కూడిక' : currentQ.operator === '×' ? 'గుణకారం' : currentQ.operator === '÷' ? 'భాగహారం' : 'సమానం';
+    if (!currentQuestion) return;
 
-    const problemPrompt =
-      language === 'te'
-        ? `ప్రశ్న: ${currentQ.operand1} ${opTelugu} ${currentQ.operand2} సమానం ఎంత? ${
-            showHint ? 'సూచన: ' + currentQ.hintTe : ''
-          }`
-        : `Question: What is ${currentQ.operand1} ${opSymbol} ${currentQ.operand2}? ${
-            showHint ? 'Hint: ' + currentQ.hintEn : ''
-          }`;
+    const promptText = language === 'te' ? currentQuestion.promptTe : currentQuestion.promptEn;
 
     speakExplanation(
-      problemPrompt,
+      promptText,
       language,
       () => setIsSpeaking(true),
       () => setIsSpeaking(false),
@@ -301,210 +117,430 @@ export default function PracticeScreen({
     );
   };
 
-  const handleAction = () => {
-    if (status === 'idle') {
-      if (!answer.trim()) return;
+  // Start the test after reviewing pre-test summary
+  const handleStartTest = () => {
+    stopSpeaking();
+    setIsSpeaking(false);
+    setQuestionIndex(0);
+    setUserAnswer('');
+    setAnswerStatus('idle');
+    setUserAnswersList([]);
+    setFlowState('taking_test');
+  };
 
-      if (answer.trim() === currentQ.answer) {
-        setStatus('correct');
-        if (onProgressIncrement) onProgressIncrement();
-      } else {
-        setStatus('incorrect');
+  // Handle checking the current answer or moving to next question
+  const handleCheckOrNext = () => {
+    if (!currentQuestion) return;
+
+    if (answerStatus === 'idle') {
+      const trimmed = userAnswer.trim();
+      if (!trimmed) return;
+
+      const isMatch =
+        trimmed.toLowerCase() === currentQuestion.correctAnswer.toLowerCase() ||
+        (currentQuestion.acceptableAnswers &&
+          currentQuestion.acceptableAnswers.some((ans) => ans.toLowerCase() === trimmed.toLowerCase()));
+
+      const isCorrect = Boolean(isMatch);
+      setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
+
+      const answerRecord = {
+        questionPrompt: language === 'te' ? currentQuestion.promptTe : currentQuestion.promptEn,
+        studentAnswer: trimmed,
+        correctAnswer: currentQuestion.correctAnswer,
+        isCorrect,
+      };
+
+      const updatedAnswers = [...userAnswersList, answerRecord];
+      setUserAnswersList(updatedAnswers);
+
+      if (isCorrect && onProgressIncrement) {
+        onProgressIncrement();
       }
     } else {
-      // Advance to next
+      // Advance to next question or complete test
       stopSpeaking();
       setIsSpeaking(false);
-      setStatus('idle');
-      setAnswer('');
-      setShowHint(false);
-      if (currentIndex < list.length - 1) {
-        setCurrentIndex(currentIndex + 1);
+      setAnswerStatus('idle');
+      setUserAnswer('');
+
+      if (questionIndex < questions.length - 1) {
+        setQuestionIndex(questionIndex + 1);
       } else {
-        // Loop back
-        setCurrentIndex(0);
+        // Test completed!
+        const finalCorrect = userAnswersList.filter((a) => a.isCorrect).length;
+        const total = questions.length;
+        const percentage = Math.round((finalCorrect / total) * 100);
+
+        setFinalScore({ score: finalCorrect, total, percentage });
+
+        // Save and synchronize to teacher dashboard & progress storage
+        const testRecord: CompletedTestRecord = {
+          id: `test-${Date.now()}`,
+          studentName: studentName || 'Student',
+          studentClass: studentClass,
+          chapterId: currentChapter.id,
+          chapterNumber: currentChapter.chapterNumber,
+          chapterTitleEn: currentChapter.titleEn,
+          chapterTitleTe: currentChapter.titleTe,
+          score: finalCorrect,
+          totalQuestions: total,
+          percentage: percentage,
+          passed: percentage >= 50,
+          completedAt: new Date().toISOString(),
+          timeFormatted: `${t('Today', 'ఈరోజు')}, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+          answers: userAnswersList,
+        };
+
+        saveCompletedTest(testRecord);
+        setFlowState('test_completed');
       }
     }
   };
 
   return (
-    <div className="animate-in fade-in duration-500 max-w-3xl mx-auto pt-4 md:pt-6 space-y-6">
-      
-      <div className="flex items-center justify-between">
+    <div className="animate-in fade-in duration-500 max-w-4xl mx-auto pt-2 md:pt-4 space-y-6 pb-12">
+      {/* Top Header Bar with Back navigation & chapter badge */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <button
+          type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer self-start"
         >
           <ArrowLeft size={18} />
-          {t('Back to Dashboard', 'డాష్‌బోర్డ్‌కు తిరిగి వెళ్లండి')}
+          <span>{t('Back to Dashboard', 'డాష్‌బోర్డ్‌కు తిరిగి వెళ్లండి')}</span>
         </button>
 
-        <span className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
-          {currentIndex + 1} / {list.length} {t('Questions', 'ప్రశ్నలు')}
-        </span>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <span className="text-xs font-bold px-3 py-1 bg-white dark:bg-neutral-800 rounded-full border border-black/5 dark:border-white/5 text-neutral-600 dark:text-neutral-300">
+            {studentClass} • {t(`Chapter ${currentChapter.chapterNumber}`, `అధ్యాయం ${currentChapter.chapterNumber}`)}
+          </span>
+        </div>
       </div>
 
-      <div className="bg-white dark:bg-neutral-800 rounded-[40px] p-6 md:p-12 shadow-sm border border-black/5 dark:border-white/5 text-center relative overflow-hidden">
-        
-        <div className="absolute top-6 right-6 md:top-8 md:right-8">
-          <button 
-            onClick={() => setShowHint(!showHint)}
-            className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 flex items-center justify-center hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors cursor-pointer"
-            title={t('Show Hint', 'సూచన చూపించు')}
-          >
-            <HelpCircle size={20} />
-          </button>
-        </div>
-
-        {/* Question Number & interactive voice explanation button */}
-        <div className="flex items-center justify-center gap-3 mb-8 md:mb-10 mt-2 md:mt-0 flex-wrap">
-          <div className="inline-flex items-center gap-2 bg-neutral-100 dark:bg-neutral-700/60 text-neutral-800 dark:text-neutral-200 px-4 py-2 rounded-full font-bold text-sm shadow-xs border border-black/5 dark:border-white/10">
-            <span>
-              {t('Question', 'ప్రశ్న')} {currentIndex + 1}
-            </span>
-          </div>
-
+      {/* Chapter Selection Pill List (Select which chapter to test on) */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
+        {activeList.map((ch) => (
           <button
+            key={ch.id}
             type="button"
-            onClick={handleSpeak}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-semibold text-xs sm:text-sm transition-all cursor-pointer shadow-xs ${
-              isSpeaking
-                ? 'bg-amber-500 text-white animate-pulse'
-                : 'bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200'
+            onClick={() => {
+              setActiveChapterId(ch.id);
+              setFlowState('pre_test_summary');
+              setQuestionIndex(0);
+              setUserAnswer('');
+              setAnswerStatus('idle');
+              setUserAnswersList([]);
+            }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border flex items-center gap-1.5 ${
+              activeChapterId === ch.id
+                ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 border-neutral-900 dark:border-white shadow-xs'
+                : 'bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border-black/5 dark:border-white/5 hover:bg-neutral-50 dark:hover:bg-neutral-700'
             }`}
-            title={
-              language === 'te'
-                ? 'వాయిస్ ద్వారా ప్రశ్న వినండి'
-                : 'Listen to voice explanation'
-            }
           >
-            {isSpeaking ? <VolumeX size={16} /> : <Volume2 size={16} />}
-            <span>
-              {isSpeaking
-                ? t('Stop Voice', 'ఆపండి')
-                : t('Listen (Voice)', 'వినండి (వాయిస్)')}
+            <span className="w-4 h-4 rounded-full bg-[#D4F670] text-[#1a1a1a] text-[10px] font-black flex items-center justify-center">
+              {ch.chapterNumber}
             </span>
+            <span>{t(ch.titleEn, ch.titleTe)}</span>
           </button>
-        </div>
-
-        {/* HIGH-CONTRAST MATH PROBLEM DISPLAY */}
-        {/* All mathematical symbols (+, −, ×, ÷, =) are rendered inside bold, high-contrast badges with generous spacing */}
-        <div className="mb-10 flex items-center justify-center flex-wrap gap-y-4 text-neutral-900 dark:text-white select-none">
-          <span className="text-4xl md:text-6xl font-black px-2 tracking-tight">
-            {currentQ.operand1}
-          </span>
-          
-          {/* Arithmetical Operator Symbol Badge */}
-          <MathSymbolBadge symbol={currentQ.operator} size="large" />
-
-          <span className="text-4xl md:text-6xl font-black px-2 tracking-tight">
-            {currentQ.operand2}
-          </span>
-
-          {/* Equality / Arrow Symbol Badge */}
-          <MathSymbolBadge symbol={level === 'Advanced' && currentQ.operator === '=' ? '=>' : '='} size="large" />
-
-          <div className="relative inline-block ml-2">
-            <input 
-              type="text"
-              value={answer}
-              onChange={(e) => {
-                setAnswer(e.target.value);
-                if (status !== 'idle') setStatus('idle');
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAction();
-              }}
-              disabled={status !== 'idle'}
-              placeholder="?"
-              autoFocus
-              className={`w-24 h-16 md:w-32 md:h-20 text-center rounded-2xl md:rounded-3xl border-4 outline-none transition-all text-3xl md:text-5xl font-black
-                ${status === 'idle' ? 'border-neutral-300 dark:border-neutral-600 focus:border-neutral-900 dark:focus:border-white bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white' : ''}
-                ${status === 'correct' ? 'border-green-500 bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-300' : ''}
-                ${status === 'incorrect' ? 'border-red-500 bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-300' : ''}
-              `}
-              maxLength={4}
-            />
-            {status === 'correct' && (
-              <div className="absolute -right-3 -top-3 md:-right-4 md:-top-4 w-9 h-9 md:w-11 md:h-11 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg animate-in zoom-in">
-                <Check size={22} strokeWidth={4} />
-              </div>
-            )}
-            {status === 'incorrect' && (
-              <div className="absolute -right-3 -top-3 md:-right-4 md:-top-4 w-9 h-9 md:w-11 md:h-11 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg animate-in zoom-in">
-                <X size={22} strokeWidth={4} />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* INTERACTIVE HIGH-CONTRAST FEEDBACK SCREEN */}
-        {status === 'correct' && (
-          <div className="bg-emerald-50 dark:bg-emerald-950/60 border-2 border-emerald-500/70 p-4 md:p-5 rounded-2xl max-w-lg mx-auto mb-6 flex flex-col sm:flex-row items-center justify-center gap-3 animate-in zoom-in-95 shadow-sm">
-            <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm">
-              <Sparkles size={20} />
-            </div>
-            <div className="text-center sm:text-left">
-              <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
-                {t('Correct Answer! Great Job!', 'సరైన సమాధానం! అద్భుతం!')}
-              </p>
-              <div className="flex items-center justify-center sm:justify-start flex-wrap gap-1 text-base md:text-lg font-bold text-neutral-900 dark:text-white mt-1">
-                <span>{currentQ.operand1}</span>
-                <MathSymbolBadge symbol={currentQ.operator} size="normal" />
-                <span>{currentQ.operand2}</span>
-                <MathSymbolBadge symbol="=" size="normal" />
-                <span className="text-emerald-600 dark:text-emerald-400 font-black text-lg md:text-xl">
-                  {currentQ.answer}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {status === 'incorrect' && (
-          <div className="bg-red-50 dark:bg-red-950/60 border-2 border-red-500/70 p-4 md:p-5 rounded-2xl max-w-lg mx-auto mb-6 flex flex-col sm:flex-row items-center justify-center gap-3 animate-in zoom-in-95 shadow-sm">
-            <div className="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center shrink-0 shadow-sm">
-              <X size={20} strokeWidth={3.5} />
-            </div>
-            <div className="text-center sm:text-left">
-              <p className="text-xs font-bold uppercase tracking-wider text-red-700 dark:text-red-300">
-                {t('Not quite right. Review the equation:', 'సరైన సమీకరణాన్ని సమీక్షించండి:')}
-              </p>
-              <div className="flex items-center justify-center sm:justify-start flex-wrap gap-1 text-base md:text-lg font-bold text-neutral-900 dark:text-white mt-1">
-                <span>{currentQ.operand1}</span>
-                <MathSymbolBadge symbol={currentQ.operator} size="normal" />
-                <span>{currentQ.operand2}</span>
-                <MathSymbolBadge symbol="=" size="normal" />
-                <span className="text-green-600 dark:text-green-400 font-black text-lg md:text-xl">
-                  {currentQ.answer}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showHint && (
-          <div className="bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 p-5 rounded-2xl mb-8 max-w-md mx-auto text-left flex gap-3 animate-in slide-in-from-top-4 border border-amber-200/60 dark:border-amber-800/60 shadow-xs">
-            <div className="text-xl">💡</div>
-            <div>
-              <p className="font-semibold text-sm mb-0.5">{t('Hint', 'సూచన')}</p>
-              <p className="opacity-90 text-sm leading-relaxed">{t(currentQ.hintEn, currentQ.hintTe)}</p>
-            </div>
-          </div>
-        )}
-
-        <button 
-          onClick={handleAction}
-          className={`text-base md:text-lg font-bold py-4 px-10 md:py-4 md:px-14 rounded-full transition-all shadow-lg active:scale-95 cursor-pointer ${
-            status === 'idle' 
-              ? 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:bg-black dark:hover:bg-white hover:-translate-y-0.5' 
-              : 'bg-[#D4F670] hover:bg-[#bce451] text-black hover:-translate-y-0.5'
-          }`}
-        >
-          {status === 'idle' ? t('Check Answer', 'సమాధానం తనిఖీ చేయండి') : t('Next Question', 'తదుపరి ప్రశ్న')}
-        </button>
-
+        ))}
       </div>
+
+      {/* ============================================================
+          PHASE 1: PRE-TEST TOPIC SUMMARY CARD & "START TEST" ACTION
+          ============================================================ */}
+      {flowState === 'pre_test_summary' && (
+        <div className="bg-white dark:bg-neutral-800 rounded-[36px] p-6 md:p-10 shadow-sm border border-black/5 dark:border-white/5 space-y-7 animate-in zoom-in-95">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 dark:border-neutral-700 pb-4">
+            <div>
+              <span className="text-xs font-extrabold uppercase px-2.5 py-1 rounded-full bg-[#D4F670]/30 text-neutral-900 dark:text-[#D4F670] inline-block mb-1.5">
+                {t('Pre-Test Topic Summary', 'పరీక్షకు ముందస్తు ముఖ్యాంశాలు')}
+              </span>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-neutral-900 dark:text-white">
+                {t(currentChapter.titleEn, currentChapter.titleTe)}
+              </h2>
+            </div>
+
+            <span className="text-xs font-bold px-3 py-1 bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-full self-start sm:self-auto">
+              {currentChapter.testQuestions.length} {t('Test Questions', 'పరీక్ష ప్రశ్నలు')}
+            </span>
+          </div>
+
+          {/* Visual Diagram Reminder */}
+          <div className="bg-neutral-50 dark:bg-neutral-900/60 rounded-3xl p-5 border border-black/5 dark:border-white/5">
+            <span className="text-xs font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 block mb-3 text-center sm:text-left">
+              {t('Visual Concept Diagram Reminder', 'దృశ్య భావనల రేఖాచిత్రం')}
+            </span>
+            <MathDiagram
+              type={currentChapter.visualDiagramType}
+              language={language}
+              t={t}
+              size="normal"
+            />
+          </div>
+
+          {/* Key Concept Reminders */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              {t('Key Rules & Concepts to Remember', 'గుర్తుంచుకోవలసిన ముఖ్య నియమాలు')}
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {(language === 'te' ? currentChapter.keyConceptsTe : currentChapter.keyConceptsEn).map((concept, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-700/40 border border-neutral-200/60 dark:border-neutral-700"
+                >
+                  <CheckCircle2 size={16} className="text-emerald-500 shrink-0 mt-0.5" />
+                  <span className="text-xs md:text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                    {concept}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Prompt requested: Prominent "Start Test" button below summary card */}
+          <div className="pt-4 border-t border-neutral-100 dark:border-neutral-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center sm:text-left">
+              {t(
+                'When you click Start Test, your answers will be evaluated and synced to the teacher portal.',
+                'మీరు స్టార్ట్ టెస్ట్ క్లిక్ చేయగానే మీ సమాధానాలు ఉపాధ్యాయుని పోర్టల్‌కు అనుసంధానించబడతాయి.'
+              )}
+            </p>
+
+            <button
+              type="button"
+              onClick={handleStartTest}
+              className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#D4F670] hover:bg-[#bce451] text-black font-extrabold text-base md:text-lg transition-transform hover:scale-102 active:scale-98 shadow-lg shadow-[#D4F670]/15 flex items-center justify-center gap-2 cursor-pointer shrink-0"
+            >
+              <PlayCircle size={22} className="stroke-[2.5]" />
+              <span>{t('Start Test', 'టెస్ట్ ప్రారంభించండి')}</span>
+              <span>→</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================
+          PHASE 2: DIAGRAM-BASED ASSESSMENT (FILL-IN-THE-BLANK QUESTIONS)
+          ============================================================ */}
+      {flowState === 'taking_test' && currentQuestion && (
+        <div className="bg-white dark:bg-neutral-800 rounded-[36px] p-6 md:p-10 shadow-sm border border-black/5 dark:border-white/5 space-y-7 animate-in fade-in">
+          {/* Header Bar */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-[#D4F670] animate-ping"></span>
+              <span className="text-xs md:text-sm font-extrabold text-neutral-900 dark:text-white">
+                {t('Test Question', 'పరీక్ష ప్రశ్న')} {questionIndex + 1} / {questions.length}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Voice Read-Aloud Button */}
+              <button
+                type="button"
+                onClick={handleSpeakQuestion}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  isSpeaking
+                    ? 'bg-amber-500 text-white animate-pulse'
+                    : 'bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200'
+                }`}
+                title={language === 'te' ? 'ప్రశ్న వినండి' : 'Listen to question'}
+              >
+                {isSpeaking ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                <span>{isSpeaking ? t('Stop', 'ఆపండి') : t('Listen', 'వినండి')}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Question Prompt */}
+          <div className="text-center sm:text-left space-y-1">
+            <h3 className="text-xl md:text-2xl font-bold text-neutral-900 dark:text-white leading-relaxed">
+              {language === 'te' ? currentQuestion.promptTe : currentQuestion.promptEn}
+            </h3>
+          </div>
+
+          {/* High-Contrast Fill-in-the-Blank Answer Input */}
+          <div className="flex flex-col items-center justify-center gap-3 pt-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              {t('Enter Your Answer:', 'మీ సమాధానాన్ని నమోదు చేయండి:')}
+            </label>
+
+            <div className="relative flex items-center justify-center">
+              <input
+                type="text"
+                value={userAnswer}
+                onChange={(e) => {
+                  setUserAnswer(e.target.value);
+                  if (answerStatus !== 'idle') setAnswerStatus('idle');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleCheckOrNext();
+                }}
+                disabled={answerStatus !== 'idle'}
+                placeholder="?"
+                autoFocus
+                className={`w-40 sm:w-52 h-16 md:h-20 text-center rounded-3xl border-4 outline-none transition-all text-2xl md:text-4xl font-black
+                  ${
+                    answerStatus === 'idle'
+                      ? 'border-neutral-300 dark:border-neutral-600 focus:border-neutral-900 dark:focus:border-white bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white'
+                      : ''
+                  }
+                  ${
+                    answerStatus === 'correct'
+                      ? 'border-green-500 bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-300'
+                      : ''
+                  }
+                  ${
+                    answerStatus === 'incorrect'
+                      ? 'border-red-500 bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-300'
+                      : ''
+                  }
+                `}
+              />
+              {answerStatus === 'correct' && (
+                <div className="absolute -right-3 -top-3 w-9 h-9 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg animate-in zoom-in">
+                  <Check size={20} strokeWidth={4} />
+                </div>
+              )}
+              {answerStatus === 'incorrect' && (
+                <div className="absolute -right-3 -top-3 w-9 h-9 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg animate-in zoom-in">
+                  <X size={20} strokeWidth={4} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Feedback Card */}
+          {answerStatus === 'correct' && (
+            <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-400 text-center animate-in zoom-in-95">
+              <span className="text-xs font-bold uppercase text-emerald-700 dark:text-emerald-300 block">
+                {t('Correct! Excellent Work!', 'సరైన సమాధానం! అద్భుతం!')}
+              </span>
+              <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 mt-1">
+                {language === 'te' ? currentQuestion.explanationTe : currentQuestion.explanationEn}
+              </p>
+            </div>
+          )}
+
+          {answerStatus === 'incorrect' && (
+            <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/60 border border-red-400 text-center animate-in zoom-in-95">
+              <span className="text-xs font-bold uppercase text-red-700 dark:text-red-300 block">
+                {t('Not quite right.', 'సరైనది కాదు.')}
+              </span>
+              <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 mt-1">
+                {t('Correct Answer: ', 'సరైన సమాధానం: ')}
+                <span className="font-extrabold text-green-600 dark:text-green-400">
+                  {currentQuestion.correctAnswer}
+                </span>
+              </p>
+              <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1">
+                {language === 'te' ? currentQuestion.explanationTe : currentQuestion.explanationEn}
+              </p>
+            </div>
+          )}
+
+          {/* Action Button: Check Answer or Next Question */}
+          <div className="pt-3 border-t border-neutral-100 dark:border-neutral-700 flex justify-center">
+            <button
+              type="button"
+              onClick={handleCheckOrNext}
+              className={`px-10 py-4 rounded-full font-extrabold text-base md:text-lg transition-transform active:scale-95 shadow-md cursor-pointer ${
+                answerStatus === 'idle'
+                  ? 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:bg-black'
+                  : 'bg-[#D4F670] hover:bg-[#bce451] text-black'
+              }`}
+            >
+              {answerStatus === 'idle'
+                ? t('Check Answer', 'సమాధానం తనిఖీ చేయండి')
+                : questionIndex < questions.length - 1
+                ? t('Next Question', 'తదుపరి ప్రశ్న')
+                : t('Complete Test & Save Score', 'పరీక్షను పూర్తి చేయండి & స్కోర్ సేవ్ చేయండి')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================
+          PHASE 3: TEST COMPLETED & TEACHER SYNCHRONIZATION SUMMARY
+          ============================================================ */}
+      {flowState === 'test_completed' && (
+        <div className="bg-white dark:bg-neutral-800 rounded-[36px] p-6 md:p-10 shadow-sm border border-black/5 dark:border-white/5 space-y-7 text-center animate-in zoom-in-95">
+          <div className="w-16 h-16 rounded-full bg-[#D4F670] text-[#1a1a1a] flex items-center justify-center mx-auto shadow-md">
+            <Sparkles size={32} />
+          </div>
+
+          <div>
+            <span className="text-xs font-extrabold uppercase px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 inline-block mb-2">
+              {t('Chapter Test Submitted', 'అధ్యాయం పరీక్ష సమర్పించబడింది')}
+            </span>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-neutral-900 dark:text-white">
+              {t('Great Job, ', 'అభినందనలు, ')}{studentName}!
+            </h2>
+            <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1">
+              {t(currentChapter.titleEn, currentChapter.titleTe)}
+            </p>
+          </div>
+
+          {/* Score Badge */}
+          <div className="p-6 rounded-3xl bg-neutral-50 dark:bg-neutral-900 max-w-sm mx-auto border border-black/5 dark:border-white/5 space-y-2">
+            <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider block">
+              {t('Final Score', 'తుది స్కోరు')}
+            </span>
+            <div className="text-5xl font-black text-neutral-900 dark:text-white">
+              {finalScore.score} / {finalScore.total}
+            </div>
+            <span className="inline-block px-3 py-1 rounded-full font-bold text-xs bg-[#D4F670] text-[#1a1a1a]">
+              {finalScore.percentage}% {t('Accuracy', 'ఖచ్చితత్వం')}
+            </span>
+          </div>
+
+          {/* Teacher Synchronization Notice */}
+          <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 max-w-lg mx-auto flex items-center justify-center gap-2.5 text-emerald-900 dark:text-emerald-200 text-xs sm:text-sm font-semibold">
+            <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>
+              {t(
+                'Test score and submission date synced with Teacher Dashboard successfully.',
+                'పరీక్ష స్కోరు మరియు సమర్పణ తేదీ ఉపాధ్యాయుని డాష్‌బోర్డ్‌తో సమకాలీకరించబడ్డాయి.'
+              )}
+            </span>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
+            {onNavigateToProgress && (
+              <button
+                type="button"
+                onClick={onNavigateToProgress}
+                className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-extrabold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+              >
+                <TrendingUp size={16} />
+                <span>{t('View in My Progress', 'నా పురోగతిలో చూడండి')}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleStartTest}
+              className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <RotateCcw size={16} />
+              <span>{t('Retake Test', 'మళ్ళీ పరీక్ష రాయండి')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setFlowState('pre_test_summary');
+              }}
+              className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-[#D4F670] hover:bg-[#bce451] text-black font-extrabold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+            >
+              <BookOpen size={16} />
+              <span>{t('Choose Another Chapter', 'మరొక అధ్యాయాన్ని ఎంచుకోండి')}</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

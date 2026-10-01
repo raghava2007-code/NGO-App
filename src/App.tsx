@@ -64,6 +64,7 @@ function App() {
   });
   const [taskProgress, setTaskProgress] = useState<number>(68);
   const [studentView, setStudentView] = useState<StudentViewState>('student_home');
+  const [selectedChapterId, setSelectedChapterId] = useState<string>('c1-ch1');
   const [language, setLanguage] = useState<Language>(() => {
     try {
       const saved = localStorage.getItem('ganitmitra_language');
@@ -318,7 +319,7 @@ function App() {
                       {username ? username.charAt(0).toUpperCase() : 'S'}
                     </div>
                     <span className="text-xs sm:text-sm font-bold text-white truncate max-w-[100px] sm:max-w-[120px] md:max-w-[110px]">
-                      {username || 'Student'}
+                      {username || t('Student', 'విద్యార్థి')}
                     </span>
                   </div>
                   <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-black px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg bg-[#D4F670] text-[#1a1a1a] shrink-0 shadow-xs">
@@ -343,7 +344,7 @@ function App() {
                           STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)!.categoryEn,
                           STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)!.categoryTe
                         )
-                      : 'School'}
+                      : t('School', 'పాఠశాల')}
                   </span>
                 </div>
               </div>
@@ -356,7 +357,7 @@ function App() {
                     {username || t('Teacher', 'ఉపాధ్యాయుడు')}
                   </span>
                   <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-[#D4F670] text-[#1a1a1a]">
-                    {teacherSubject}
+                    {teacherSubject === 'Mathematics' ? t('Mathematics', 'గణితం') : teacherSubject === 'Basic Arithmetic' ? t('Basic Arithmetic', 'ప్రాథమిక అంకగణితం') : teacherSubject === 'Algebra & Geometry' ? t('Algebra & Geometry', 'బీజగణితం & జ్యామితి') : teacherSubject === 'Science & Math' ? t('Science & Math', 'సైన్స్ & మ్యాథ్స్') : teacherSubject}
                   </span>
                 </div>
                 <span className="text-[10px] sm:text-[11px] text-neutral-300 font-medium">
@@ -520,6 +521,11 @@ function App() {
                     onSelectAssignedTask={(_task) => setStudentView('student_practice')}
                     studentName={username}
                     studentClass={studentClass}
+                    onSelectChapter={(chapterId, action) => {
+                      setSelectedChapterId(chapterId);
+                      setStudentView(action === 'learn' ? 'student_learn' : 'student_practice');
+                    }}
+                    language={language}
                   />
                 )}
 
@@ -528,8 +534,13 @@ function App() {
                     level={studentLevel}
                     t={t}
                     language={language}
-                    onPractice={() => setStudentView('student_practice')}
+                    onPractice={(chapterId) => {
+                      if (chapterId) setSelectedChapterId(chapterId);
+                      setStudentView('student_practice');
+                    }}
                     studentClass={studentClass}
+                    selectedChapterId={selectedChapterId}
+                    onSelectChapter={(id) => setSelectedChapterId(id)}
                   />
                 )}
 
@@ -541,11 +552,19 @@ function App() {
                     onBack={() => setStudentView('student_home')}
                     onProgressIncrement={() => setTaskProgress((prev) => Math.min(100, prev + 12))}
                     studentClass={studentClass}
+                    selectedChapterId={selectedChapterId}
+                    onNavigateToProgress={() => setStudentView('student_progress')}
+                    studentName={username}
                   />
                 )}
 
                 {studentView === 'student_progress' && (
-                  <StudentProgress t={t} />
+                  <StudentProgress
+                    t={t}
+                    studentName={username}
+                    studentClass={studentClass}
+                    onGoToPractice={() => setStudentView('student_practice')}
+                  />
                 )}
 
                 {studentView === 'student_settings' && (
@@ -596,7 +615,7 @@ function App() {
                 <button
                   onClick={() => setIsTaskNotificationsOpen(false)}
                   className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-                  aria-label="Close"
+                  aria-label={t('Close', 'మూసివేయి')}
                 >
                   <X size={18} />
                 </button>
@@ -623,10 +642,23 @@ function App() {
                     >
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#D4F670]/30 text-neutral-900 dark:text-[#D4F670] border border-[#D4F670]/40">
-                          {task.targetLevel === 'All' ? t('All Levels', 'అన్ని స్థాయిలు') : task.targetLevel}
+                          {task.targetLevel === 'All'
+                            ? t('All Levels', 'అన్ని స్థాయిలు')
+                            : t(
+                                task.targetLevel,
+                                task.targetLevel === 'Beginner'
+                                  ? 'ప్రారంభం'
+                                  : task.targetLevel === 'Intermediate'
+                                  ? 'మధ్యస్థం'
+                                  : 'అధునాతనం'
+                              )}
                         </span>
                         <span className="text-[11px] text-neutral-400 dark:text-neutral-500 font-medium">
-                          {task.assignedDate}
+                          {task.assignedDate === 'Today'
+                            ? t('Today', 'ఈరోజు')
+                            : task.assignedDate === 'Yesterday'
+                            ? t('Yesterday', 'నిన్న')
+                            : task.assignedDate}
                         </span>
                       </div>
                       <h4 className="font-bold text-sm text-neutral-900 dark:text-white mb-1 group-hover:text-emerald-600 dark:group-hover:text-[#D4F670] transition-colors">

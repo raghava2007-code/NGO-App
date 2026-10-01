@@ -53,3 +53,83 @@ export interface AssignedTask {
   status: 'pending' | 'in_progress' | 'completed';
   dueDate?: string;
 }
+
+export interface StoredUser {
+  id: string;
+  role: UserRole;
+  username: string;
+  password: string;
+  studentClass?: StudentClass;
+  level?: StudentLevel;
+  subject?: string;
+  createdAt: string;
+}
+
+export interface CompletedTestRecord {
+  id: string;
+  studentName: string;
+  studentClass: StudentClass;
+  chapterId: string;
+  chapterNumber: number;
+  chapterTitleEn: string;
+  chapterTitleTe: string;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  passed: boolean;
+  completedAt: string;
+  timeFormatted: string;
+  answers: {
+    questionPrompt: string;
+    studentAnswer: string;
+    correctAnswer: string;
+    isCorrect: boolean;
+  }[];
+}
+
+export const INITIAL_DEMO_USERS: StoredUser[] = [
+  {
+    id: 'student-demo-1',
+    role: 'student',
+    username: 'Raghava',
+    password: 'password123',
+    studentClass: 'Class 5',
+    level: 'Beginner',
+    createdAt: '2026-09-01T00:00:00Z',
+  },
+  {
+    id: 'student-demo-2',
+    role: 'student',
+    username: 'Sai Kumar',
+    password: 'password123',
+    studentClass: 'Class 7',
+    level: 'Intermediate',
+    createdAt: '2026-09-01T00:00:00Z',
+  },
+  {
+    id: 'student-demo-3',
+    role: 'student',
+    username: 'Rahul V.',
+    password: 'password123',
+    studentClass: 'Class 10',
+    level: 'Advanced',
+    createdAt: '2026-09-01T00:00:00Z',
+  },
+  {
+    id: 'teacher-demo-1',
+    role: 'teacher',
+    username: 'Mr. Sharma',
+    password: '12345',
+    subject: 'Mathematics',
+    createdAt: '2026-09-01T00:00:00Z',
+  },
+  {
+    id: 'teacher-demo-2',
+    role: 'teacher',
+    username: 'Teacher',
+    password: '12345',
+    subject: 'Mathematics',
+    createdAt: '2026-09-01T00:00:00Z',
+  },
+];
+
