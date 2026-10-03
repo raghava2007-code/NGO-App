@@ -1,4 +1,4 @@
-import { CheckCircle2, PlayCircle, BookOpen, Sparkles, Award, RotateCcw, Clock, XCircle } from 'lucide-react';
+import { CheckCircle2, PlayCircle, BookOpen, Sparkles, RotateCcw, Clock, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCompletedTests, resetOrDeleteTest, updateTestRetakeRequest } from '../utils/testStorage';
 import { CompletedTestRecord, StudentClass } from '../types';
@@ -142,7 +142,7 @@ export default function StudentProgress({
         </div>
 
         {/* Quick Highlights Stats */}
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3.5 lg:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 lg:gap-4 w-full">
           <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-neutral-800 border border-black/5 dark:border-white/5 shadow-xs space-y-1">
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center mb-2.5">
               <CheckCircle2 size={18} />
@@ -157,23 +157,6 @@ export default function StudentProgress({
               {t('Directly synchronized with teacher roster', 'ఉపాధ్యాయుల రికార్డులతో అనుసంధానించబడింది')}
             </span>
           </div>
-
-          <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-neutral-800 border border-black/5 dark:border-white/5 shadow-xs space-y-1">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 flex items-center justify-center mb-2.5">
-              <Award size={18} />
-            </div>
-            <span className="text-[11px] sm:text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider block">
-              {t('Mastery Status', 'సాధనా స్థితి')}
-            </span>
-            <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-[#D4F670]">
-              {averageAccuracy >= 60 ? t('On Track', 'ముందంజలో') : t('Reviewing', 'సమీక్షలో')}
-            </div>
-            <span className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 block pt-1">
-              {averageAccuracy >= 60
-                ? t('Ready for higher difficulty drills', 'తదుపరి స్థాయికి సిద్ధం')
-                : t('Practice review concepts recommended', 'కాన్సెప్ట్ సాధన సిఫార్సు చేయబడింది')}
-            </span>
-          </div>
         </div>
       </div>
 
@@ -184,7 +167,7 @@ export default function StudentProgress({
             {t('Completed Chapter Tests & Answer Records', 'పూర్తయిన అధ్యాయాల పరీక్షలు & సమాధానాల రికార్డులు')}
           </h3>
           <span className="text-xs font-bold text-neutral-400">
-            {completedTests.length} {t('Submissions', 'సమర్పణలు')}
+            {completedTests.length > 0 ? `${completedTests.length} ${t('Submissions', 'సమర్పణలు')}` : t('None', 'ఏమీ లేదు')}
           </span>
         </div>
 
@@ -192,10 +175,10 @@ export default function StudentProgress({
           <div className="bg-white dark:bg-neutral-800 rounded-3xl p-10 text-center border border-black/5 dark:border-white/5 space-y-3">
             <BookOpen size={32} className="text-neutral-400 mx-auto" />
             <h4 className="text-base font-bold text-neutral-800 dark:text-neutral-200">
-              {t('No tests completed yet', 'ఇంకా పరీక్షలు ఏవీ పూర్తి కాలేదు')}
+              {t('None', 'ఏమీ లేదు')}
             </h4>
             <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-              {t('Choose a chapter from the Home page or Practice page to take your first test.', 'మొదటి పరీక్ష రాయడానికి హోమ్ పేజీ నుండి అధ్యాయాన్ని ఎంచుకోండి.')}
+              {t('No chapter tests attempted yet. Complete a test to view your scores and answer records here.', 'ఇంకా ఏ పరీక్షా ప్రయత్నించలేదు. మీ స్కోర్లు మరియు సమాధానాల రికార్డులను చూడటానికి పరీక్షను పూర్తి చేయండి.')}
             </p>
           </div>
         ) : (

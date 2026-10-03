@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, BookOpen, Bell, X, TrendingUp, LogOut, Settings, PlayCircle, ClipboardList, ArrowRight, CheckCircle2, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, Bell, X, TrendingUp, LogOut, Settings, PlayCircle, ClipboardList, ArrowRight, CheckCircle2, GraduationCap, WifiOff } from 'lucide-react';
 import StudentDashboard from './components/StudentDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import PracticeScreen from './components/PracticeScreen';
@@ -11,6 +11,7 @@ import AnimatedLogo from './components/AnimatedLogo';
 import ThemeToggle from './components/ThemeToggle';
 import RoleBasedSearchBar from './components/RoleBasedSearchBar';
 import { AssignedTask, ThemeMode, StudentClass, STUDENT_CLASS_OPTIONS } from './types';
+import { subscribeNetworkStatus } from './utils/offlineSync';
 
 export type StudentViewState = 'student_home' | 'student_learn' | 'student_practice' | 'student_progress' | 'student_settings';
 export type Language = 'en' | 'te';
@@ -77,6 +78,14 @@ function App() {
     return 'en';
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState<boolean>(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+
+  useEffect(() => {
+    const unsubscribe = subscribeNetworkStatus((online) => {
+      setIsOnline(online);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     try {
@@ -494,6 +503,24 @@ function App() {
 
           {/* Scrollable View Content */}
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 xl:px-10 pb-10 custom-scrollbar">
+            
+            {/* Offline Mode Active Notification Banner */}
+            {!isOnline && (
+              <div className="mb-4 mt-2 p-3 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-900 dark:text-amber-200 text-xs sm:text-sm font-semibold flex items-center justify-between gap-2 shadow-xs animate-in fade-in">
+                <div className="flex items-center gap-2">
+                  <WifiOff size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>
+                    {t(
+                      'Offline Mode Active • Lessons, tests & progress are safely saved locally via Service Worker.',
+                      'ఆఫ్‌లైన్ మోడ్ యాక్టివ్‌గా ఉంది • పాఠాలు, పరీక్షలు & పురోగతి స్థానికంగా భద్రపరచబడ్డాయి.'
+                    )}
+                  </span>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-bold shrink-0">
+                  {t('Saved Locally', 'సేవ్ చేయబడింది')}
+                </span>
+              </div>
+            )}
             
             {/* TEACHER EXPERIENCE */}
             {isTeacher && (

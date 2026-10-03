@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="128" fill="#171717"/>
+  <rect x="24" y="24" width="464" height="464" rx="104" fill="none" stroke="#D4F670" stroke-width="8" stroke-opacity="0.3"/>
+  
+  <!-- Math Grid Pattern Accent -->
+  <circle cx="150" cy="150" r="12" fill="#D4F670" opacity="0.8"/>
+  <circle cx="362" cy="150" r="12" fill="#D4F670" opacity="0.8"/>
+  <circle cx="150" cy="362" r="12" fill="#D4F670" opacity="0.8"/>
+  <circle cx="362" cy="362" r="12" fill="#D4F670" opacity="0.8"/>
+  
+  <!-- Center Math Emblem: Sigma / Delta / Plus-Multiply Fusion -->
+  <path d="M160 170 H352 L266 256 L352 342 H160" fill="none" stroke="#D4F670" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Math Dots -->
+  <circle cx="256" cy="130" r="14" fill="#D4F670"/>
+  <circle cx="256" cy="382" r="14" fill="#D4F670"/>
+</svg>

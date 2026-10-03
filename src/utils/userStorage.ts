@@ -7,7 +7,7 @@ export function getStoredUsers(): StoredUser[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
@@ -15,7 +15,7 @@ export function getStoredUsers(): StoredUser[] {
     console.warn('Error reading stored users:', e);
   }
 
-  // Initialize with initial demo users
+  // Initialize with initial demo users (now empty)
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_DEMO_USERS));
   } catch (e) {

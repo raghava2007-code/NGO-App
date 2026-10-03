@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Check, X, Volume2, VolumeX, Sparkles, PlayCircle, BookOpen, CheckCircle2, RotateCcw, TrendingUp, Clock, XCircle } from 'lucide-react';
 import { StudentLevel, Language, StudentClass, CompletedTestRecord } from '../types';
 import { speakExplanation, stopSpeaking } from '../utils/voiceExplanation';
-import { CHAPTERS_DATA, ChapterData, TestQuestionItem } from '../data/curriculumData';
+import { CHAPTERS_DATA, ChapterData, TestQuestionItem, getChaptersForClass } from '../data/curriculumData';
 import { saveCompletedTest, updateTestRetakeRequest, getCompletedTests } from '../utils/testStorage';
 import MathDiagram from './MathDiagram';
 
@@ -32,9 +32,7 @@ export default function PracticeScreen({
   studentName = 'Student',
 }: PracticeScreenProps) {
   // Available chapters for the student's class (strictly locked to beginner topics)
-  const classChapters = CHAPTERS_DATA.filter((ch) => ch.classLevel === studentClass);
-  const defaultBeginnerChapters = CHAPTERS_DATA.filter((ch) => ch.classLevel === 'Class 1');
-  const activeList = classChapters.length > 0 ? classChapters : defaultBeginnerChapters;
+  const activeList = getChaptersForClass(studentClass);
 
   // Selected Chapter for Test
   const [activeChapterId, setActiveChapterId] = useState<string>(() => {
@@ -702,7 +700,7 @@ export default function PracticeScreen({
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-[#D4F670] animate-ping"></span>
               <span className="text-xs md:text-sm font-extrabold text-neutral-900 dark:text-white">
-                {t('Test Question', 'పరీక్ష ప్రశ్న')} {questionIndex + 1} / {questions.length}
+                {t(`Question ${questionIndex + 1} of ${questions.length}`, `ప్రశ్న ${questionIndex + 1} / ${questions.length}`)}
               </span>
             </div>
 

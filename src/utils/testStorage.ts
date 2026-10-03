@@ -1,4 +1,5 @@
 import { CompletedTestRecord } from '../types';
+import { queueOfflineAction } from './offlineSync';
 
 const TESTS_STORAGE_KEY = 'ganitmitra_student_tests';
 
@@ -113,6 +114,7 @@ export function saveCompletedTest(test: CompletedTestRecord): void {
   filtered.unshift(normalizedTest);
   try {
     localStorage.setItem(TESTS_STORAGE_KEY, JSON.stringify(filtered));
+    queueOfflineAction('TEST_SUBMISSION', normalizedTest);
     notifyTestsUpdated();
   } catch (e) {
     console.warn('Error saving completed test:', e);
@@ -133,6 +135,7 @@ export function updateTestRetakeRequest(testId: string, retakeRequested: boolean
   });
   try {
     localStorage.setItem(TESTS_STORAGE_KEY, JSON.stringify(updated));
+    queueOfflineAction('RETAKE_REQUEST', { testId, retakeRequested });
     notifyTestsUpdated();
   } catch (e) {
     console.warn('Error updating retake request:', e);

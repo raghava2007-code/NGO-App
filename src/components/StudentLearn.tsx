@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { CheckCircle, ArrowRight, PlayCircle, Volume2, VolumeX, GraduationCap } from 'lucide-react';
 import { StudentLevel, Language, StudentClass, STUDENT_CLASS_OPTIONS } from '../types';
 import { speakExplanation, stopSpeaking } from '../utils/voiceExplanation';
-import { CHAPTERS_DATA, ChapterData } from '../data/curriculumData';
+import { ChapterData, getChaptersForClass } from '../data/curriculumData';
 import MathDiagram from './MathDiagram';
 
 interface StudentLearnProps {
@@ -25,9 +25,7 @@ export default function StudentLearn({
   onSelectChapter,
 }: StudentLearnProps) {
   // Filter chapters strictly for this student's class (no intermediate or other class topics)
-  const availableClassChapters = CHAPTERS_DATA.filter((ch) => ch.classLevel === studentClass);
-  const defaultBeginnerChapters = CHAPTERS_DATA.filter((ch) => ch.classLevel === 'Class 1');
-  const activeClassChapters = availableClassChapters.length > 0 ? availableClassChapters : defaultBeginnerChapters;
+  const activeClassChapters = getChaptersForClass(studentClass);
 
   const initialChapterIndex = selectedChapterId
     ? Math.max(0, activeClassChapters.findIndex((c) => c.id === selectedChapterId))
@@ -137,7 +135,7 @@ export default function StudentLearn({
                 {t(`Chapter ${currentChapter.chapterNumber}`, `అధ్యాయం ${currentChapter.chapterNumber}`)}
               </span>
               <span className="text-xs font-bold text-neutral-400 dark:text-neutral-500">
-                {currentChapter.classLevel}
+                {currentChapter.level} Level
               </span>
             </div>
             <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 dark:text-white mb-2">

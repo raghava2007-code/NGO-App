@@ -1,6 +1,6 @@
 import { ArrowRight, BookOpen, PlayCircle } from 'lucide-react';
 import { StudentLevel, AssignedTask, StudentClass } from '../types';
-import { CHAPTERS_DATA } from '../data/curriculumData';
+import { getChaptersForClass, getLevelForStudentClass } from '../data/curriculumData';
 
 interface StudentDashboardProps {
   t: (en: string, te: string) => string;
@@ -24,11 +24,8 @@ export default function StudentDashboard({
   studentClass = 'Class 1',
   onSelectChapter,
 }: StudentDashboardProps) {
-  // Strictly isolate topics: beginner students can only access their assigned class beginner topics.
-  // Never allow intermediate or other class chapters.
-  const classChapters = CHAPTERS_DATA.filter((ch) => ch.classLevel === studentClass);
-  const defaultBeginnerChapters = CHAPTERS_DATA.filter((ch) => ch.classLevel === 'Class 1');
-  const studentChapters = classChapters.length > 0 ? classChapters : defaultBeginnerChapters;
+  const studentChapters = getChaptersForClass(studentClass);
+  const currentLevel = getLevelForStudentClass(studentClass);
 
   // Minimalist shape indicator for mobile & tablet
   const renderShapeIcon = (shapeType: string, numberLabel?: string) => {
@@ -69,7 +66,7 @@ export default function StudentDashboard({
             {t('Hello, ', 'నమస్కారం, ')}{studentName} 👋
           </h1>
           <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-            {studentClass} • {t('Beginner Level', 'ప్రారంభ స్థాయి')}
+            {studentClass} • {t(`${currentLevel} Level`, currentLevel === 'Beginner' ? 'ప్రారంభ స్థాయి' : currentLevel === 'Intermediate' ? 'మధ్యస్థ స్థాయి' : 'అధునాతన స్థాయి')}
           </p>
         </div>
       </div>

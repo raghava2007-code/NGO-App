@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Eye, EyeOff, Calculator, GraduationCap, Presentation, Check, Globe, Lock, User, Sparkles, BookOpen, ArrowRight } from 'lucide-react';
 import AnimatedLogo from './AnimatedLogo';
 import { Language, StudentClass, STUDENT_CLASS_OPTIONS, StudentLevel, UserRole, StoredUser } from '../types';
-import { getStoredUsers, saveUser, findUser } from '../utils/userStorage';
+import { saveUser, findUser } from '../utils/userStorage';
 
 export type { UserRole, StudentLevel };
 
@@ -118,44 +118,6 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
       // Log In Flow
       const matchedUser = findUser(selectedRole, trimmedName);
 
-      // Teacher fallback compatibility
-      if (selectedRole === 'teacher') {
-        const isLegacyTeacher =
-          (trimmedPassword === '12345' || trimmedPassword === 'admin') &&
-          (trimmedName.toLowerCase() === 'teacher' ||
-            trimmedName.toLowerCase() === 'admin' ||
-            trimmedName.toLowerCase() === 'mr. sharma');
-
-        if (matchedUser) {
-          if (matchedUser.password === trimmedPassword || trimmedPassword === '12345') {
-            setSuccessNotice(t('Welcome back! Loading teacher dashboard...', 'స్వాగతం! ఉపాధ్యాయుల డాష్‌బోర్డ్ లోడ్ అవుతోంది...'));
-            setTimeout(() => {
-              onLoginSuccess({
-                role: 'teacher',
-                username: matchedUser.username,
-                level: 'Advanced',
-                subject: matchedUser.subject || teacherSubject.trim() || 'Mathematics',
-              });
-            }, 400);
-            return;
-          } else {
-            setError(t('Incorrect password for teacher account.', 'ఉపాధ్యాయుల ఖాతాకు పాస్‌వర్డ్ తప్పు.'));
-            return;
-          }
-        } else if (isLegacyTeacher) {
-          setSuccessNotice(t('Welcome back, Teacher!', 'స్వాగతం, ఉపాధ్యాయులారా!'));
-          setTimeout(() => {
-            onLoginSuccess({
-              role: 'teacher',
-              username: trimmedName || 'Teacher',
-              level: 'Advanced',
-              subject: teacherSubject.trim() || 'Mathematics',
-            });
-          }, 400);
-          return;
-        }
-      }
-
       if (!matchedUser) {
         setError(
           t(
@@ -184,19 +146,6 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
       }, 400);
     }
   };
-
-  // Demo accounts autofill helper
-  const handleAutoFillDemo = (demoUser: StoredUser) => {
-    setUsername(demoUser.username);
-    setPassword(demoUser.password);
-    if (demoUser.studentClass) setStudentClass(demoUser.studentClass);
-    if (demoUser.subject) setTeacherSubject(demoUser.subject);
-    setSelectedRole(demoUser.role);
-    setAuthMode('login');
-    setError('');
-  };
-
-  const storedUsers = getStoredUsers().filter((u) => u.role === selectedRole);
 
   return (
     <div className="min-h-screen bg-[#1F1F1F] flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 font-sans text-[#F4F5F8] relative">
@@ -546,28 +495,6 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
                   : t('Already have an account? Log In →', 'ఇప్పటికే ఖాతా ఉందా? లాగిన్ అవ్వండి →')}
               </button>
             </div>
-
-            {/* Quick Demo Credentials Pill Row (Only for Log In) */}
-            {authMode === 'login' && storedUsers.length > 0 && (
-              <div className="pt-3 border-t border-white/10">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 block mb-2 text-center">
-                  {t('Quick demo login credentials:', 'త్వరిత డెమో లాగిన్ ఖాతాలు:')}
-                </span>
-                <div className="flex flex-wrap gap-1.5 justify-center">
-                  {storedUsers.slice(0, 3).map((u) => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => handleAutoFillDemo(u)}
-                      className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 rounded-xl text-[11px] font-bold text-neutral-300 border border-white/5 hover:border-[#D4F670]/40 transition-colors flex items-center gap-1 cursor-pointer"
-                    >
-                      <span className="text-[#D4F670]">{u.username}</span>
-                      <span className="text-neutral-500 text-[10px]">({u.password})</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
           </div>
         </div>
