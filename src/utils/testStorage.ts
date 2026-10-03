@@ -17,6 +17,8 @@ const INITIAL_BASELINE_TESTS: CompletedTestRecord[] = [
     passed: true,
     completedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
     timeFormatted: 'Today, 10:30 AM',
+    retake_requested: false,
+    retry_locked: true,
     answers: [
       {
         questionPrompt: 'Solve for x: 3x = 21',
@@ -46,6 +48,8 @@ const INITIAL_BASELINE_TESTS: CompletedTestRecord[] = [
     passed: true,
     completedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
     timeFormatted: 'Yesterday, 4:15 PM',
+    retake_requested: false,
+    retry_locked: true,
     answers: [
       {
         questionPrompt: '8 apples minus 3 eaten apples = ?',
@@ -63,20 +67,31 @@ const INITIAL_BASELINE_TESTS: CompletedTestRecord[] = [
   },
 ];
 
+function notifyTestsUpdated(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('ganitmitra_tests_updated'));
+  }
+}
+
 export function getCompletedTests(): CompletedTestRecord[] {
   try {
     const raw = localStorage.getItem(TESTS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return parsed.map((item) => ({
+          ...item,
+          retake_requested: item.retake_requested === true,
+          retry_locked: item.retry_locked !== false,
+          retake_rejected: item.retake_rejected === true,
+        }));
       }
     }
   } catch (e) {
     console.warn('Error reading completed tests:', e);
   }
 
-  // Prepopulate baseline tests
+  // Prepopulate baseline tests without any retake requests
   try {
     localStorage.setItem(TESTS_STORAGE_KEY, JSON.stringify(INITIAL_BASELINE_TESTS));
   } catch (e) {
@@ -89,11 +104,80 @@ export function saveCompletedTest(test: CompletedTestRecord): void {
   const current = getCompletedTests();
   // Filter out identical test id if exists
   const filtered = current.filter((t) => t.id !== test.id);
-  filtered.unshift(test);
+  const normalizedTest: CompletedTestRecord = {
+    ...test,
+    retake_requested: test.retake_requested === true,
+    retry_locked: test.retry_locked !== false,
+    retake_rejected: test.retake_rejected === true,
+  };
+  filtered.unshift(normalizedTest);
   try {
     localStorage.setItem(TESTS_STORAGE_KEY, JSON.stringify(filtered));
+    notifyTestsUpdated();
   } catch (e) {
     console.warn('Error saving completed test:', e);
+  }
+}
+
+export function updateTestRetakeRequest(testId: string, retakeRequested: boolean): void {
+  const current = getCompletedTests();
+  const updated = current.map((t) => {
+    if (t.id === testId) {
+      return {
+        ...t,
+        retake_requested: retakeRequested,
+        retake_rejected: retakeRequested ? false : t.retake_rejected,
+      };
+    }
+    return t;
+  });
+  try {
+    localStorage.setItem(TESTS_STORAGE_KEY, JSON.stringify(updated));
+    notifyTestsUpdated();
+  } catch (e) {
+    console.warn('Error updating retake request:', e);
+  }
+}
+
+export function approveTestRetake(testId: string): void {
+  const current = getCompletedTests();
+  const updated = current.map((t) => {
+    if (t.id === testId) {
+      return {
+        ...t,
+        retry_locked: false,
+        retake_requested: false,
+        retake_rejected: false,
+      };
+    }
+    return t;
+  });
+  try {
+    localStorage.setItem(TESTS_STORAGE_KEY, JSON.stringify(updated));
+    notifyTestsUpdated();
+  } catch (e) {
+    console.warn('Error approving test retake:', e);
+  }
+}
+
+export function rejectTestRetake(testId: string): void {
+  const current = getCompletedTests();
+  const updated = current.map((t) => {
+    if (t.id === testId) {
+      return {
+        ...t,
+        retry_locked: true,
+        retake_requested: false,
+        retake_rejected: true,
+      };
+    }
+    return t;
+  });
+  try {
+    localStorage.setItem(TESTS_STORAGE_KEY, JSON.stringify(updated));
+    notifyTestsUpdated();
+  } catch (e) {
+    console.warn('Error rejecting test retake:', e);
   }
 }
 
@@ -102,6 +186,7 @@ export function resetOrDeleteTest(testId: string): void {
   const filtered = current.filter((t) => t.id !== testId);
   try {
     localStorage.setItem(TESTS_STORAGE_KEY, JSON.stringify(filtered));
+    notifyTestsUpdated();
   } catch (e) {
     console.warn('Error resetting test:', e);
   }

@@ -24,9 +24,10 @@ export default function StudentLearn({
   selectedChapterId,
   onSelectChapter,
 }: StudentLearnProps) {
-  // Filter chapters for this class, or all chapters
+  // Filter chapters strictly for this student's class (no intermediate or other class topics)
   const availableClassChapters = CHAPTERS_DATA.filter((ch) => ch.classLevel === studentClass);
-  const activeClassChapters = availableClassChapters.length > 0 ? availableClassChapters : CHAPTERS_DATA.slice(0, 4);
+  const defaultBeginnerChapters = CHAPTERS_DATA.filter((ch) => ch.classLevel === 'Class 1');
+  const activeClassChapters = availableClassChapters.length > 0 ? availableClassChapters : defaultBeginnerChapters;
 
   const initialChapterIndex = selectedChapterId
     ? Math.max(0, activeClassChapters.findIndex((c) => c.id === selectedChapterId))

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Check, X, Volume2, VolumeX, Sparkles, PlayCircle, BookOpen, CheckCircle2, RotateCcw, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Check, X, Volume2, VolumeX, Sparkles, PlayCircle, BookOpen, CheckCircle2, RotateCcw, TrendingUp, Clock, XCircle } from 'lucide-react';
 import { StudentLevel, Language, StudentClass, CompletedTestRecord } from '../types';
 import { speakExplanation, stopSpeaking } from '../utils/voiceExplanation';
 import { CHAPTERS_DATA, ChapterData, TestQuestionItem } from '../data/curriculumData';
-import { saveCompletedTest } from '../utils/testStorage';
+import { saveCompletedTest, updateTestRetakeRequest, getCompletedTests } from '../utils/testStorage';
 import MathDiagram from './MathDiagram';
 
 interface PracticeScreenProps {
@@ -31,9 +31,10 @@ export default function PracticeScreen({
   onNavigateToProgress,
   studentName = 'Student',
 }: PracticeScreenProps) {
-  // Available chapters for the student's class
+  // Available chapters for the student's class (strictly locked to beginner topics)
   const classChapters = CHAPTERS_DATA.filter((ch) => ch.classLevel === studentClass);
-  const activeList = classChapters.length > 0 ? classChapters : CHAPTERS_DATA;
+  const defaultBeginnerChapters = CHAPTERS_DATA.filter((ch) => ch.classLevel === 'Class 1');
+  const activeList = classChapters.length > 0 ? classChapters : defaultBeginnerChapters;
 
   // Selected Chapter for Test
   const [activeChapterId, setActiveChapterId] = useState<string>(() => {
@@ -54,6 +55,36 @@ export default function PracticeScreen({
   const [userAnswer, setUserAnswer] = useState('');
   const [answerStatus, setAnswerStatus] = useState<'idle' | 'correct' | 'incorrect'>('idle');
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Student-initiated Retake Request State
+  const [currentTestId, setCurrentTestId] = useState<string | null>(null);
+  const [isRetakeRequested, setIsRetakeRequested] = useState<boolean>(false);
+  const [isRetakeApproved, setIsRetakeApproved] = useState<boolean>(false);
+  const [isRetakeRejected, setIsRetakeRejected] = useState<boolean>(false);
+
+  // Synchronize all completed tests to enforce Retake approval rules across screens
+  const [allCompletedTests, setAllCompletedTests] = useState<CompletedTestRecord[]>(() => getCompletedTests());
+
+  useEffect(() => {
+    const handleSync = () => {
+      setAllCompletedTests(getCompletedTests());
+    };
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('ganitmitra_tests_updated', handleSync);
+    const interval = setInterval(handleSync, 1000);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('ganitmitra_tests_updated', handleSync);
+    };
+  }, []);
+
+  // Most recent test for the active chapter by this student
+  const activeChapterTest = allCompletedTests.find(
+    (t) =>
+      t.chapterId === activeChapterId &&
+      t.studentName.trim().toLowerCase() === studentName.trim().toLowerCase()
+  );
 
   // Collected Answers for Test Record
   const [userAnswersList, setUserAnswersList] = useState<{
@@ -117,6 +148,41 @@ export default function PracticeScreen({
     );
   };
 
+  // Synchronize Retake Approval in real-time when teacher approves
+  useEffect(() => {
+    if (flowState !== 'test_completed' || !currentTestId) return;
+
+    const checkApprovalStatus = () => {
+      const tests = getCompletedTests();
+      const current = tests.find((t) => t.id === currentTestId);
+      if (current) {
+        if (current.retry_locked === false) {
+          setIsRetakeApproved(true);
+          setIsRetakeRequested(false);
+          setIsRetakeRejected(false);
+        } else if (current.retake_requested) {
+          setIsRetakeRequested(true);
+          setIsRetakeRejected(false);
+        } else if (current.retake_rejected) {
+          setIsRetakeRequested(false);
+          setIsRetakeApproved(false);
+          setIsRetakeRejected(true);
+        }
+      }
+    };
+
+    checkApprovalStatus();
+    window.addEventListener('storage', checkApprovalStatus);
+    window.addEventListener('ganitmitra_tests_updated', checkApprovalStatus);
+    const interval = setInterval(checkApprovalStatus, 1000);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', checkApprovalStatus);
+      window.removeEventListener('ganitmitra_tests_updated', checkApprovalStatus);
+    };
+  }, [flowState, currentTestId]);
+
   // Start the test after reviewing pre-test summary
   const handleStartTest = () => {
     stopSpeaking();
@@ -125,7 +191,18 @@ export default function PracticeScreen({
     setUserAnswer('');
     setAnswerStatus('idle');
     setUserAnswersList([]);
+    setIsRetakeRequested(false);
+    setIsRetakeApproved(false);
+    setIsRetakeRejected(false);
     setFlowState('taking_test');
+  };
+
+  // Student requests retake for the completed assessment
+  const handleRequestRetake = () => {
+    if (!currentTestId) return;
+    setIsRetakeRequested(true);
+    setIsRetakeRejected(false);
+    updateTestRetakeRequest(currentTestId, true);
   };
 
   // Handle checking the current answer or moving to next question
@@ -174,9 +251,10 @@ export default function PracticeScreen({
 
         setFinalScore({ score: finalCorrect, total, percentage });
 
+        const testId = `test-${Date.now()}`;
         // Save and synchronize to teacher dashboard & progress storage
         const testRecord: CompletedTestRecord = {
-          id: `test-${Date.now()}`,
+          id: testId,
           studentName: studentName || 'Student',
           studentClass: studentClass,
           chapterId: currentChapter.id,
@@ -189,13 +267,251 @@ export default function PracticeScreen({
           passed: percentage >= 50,
           completedAt: new Date().toISOString(),
           timeFormatted: `${t('Today', 'ఈరోజు')}, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+          retake_requested: false,
+          retry_locked: true,
           answers: userAnswersList,
         };
 
         saveCompletedTest(testRecord);
+        setCurrentTestId(testId);
+        setIsRetakeRequested(false);
+        setIsRetakeApproved(false);
         setFlowState('test_completed');
       }
     }
+  };
+
+  // Dedicated visual illustrations for test questions (clean and spoiler-free)
+  const renderQuestionVisual = () => {
+    if (!currentQuestion) return null;
+
+    // 1. Question 3 of Big and Small: 3 Big Stars (Addressing "there is no stars being displayed")
+    if (
+      currentQuestion.id === 'q-c1-ch1-3' ||
+      (currentQuestion.diagramType === 'counting' && currentQuestion.diagramData?.itemType === 'big_star') ||
+      currentQuestion.promptEn.toLowerCase().includes('big star') ||
+      currentQuestion.promptEn.toLowerCase().includes('stars')
+    ) {
+      return (
+        <div className="w-full max-w-lg mx-auto bg-neutral-50 dark:bg-neutral-900/60 rounded-3xl p-6 border border-black/5 dark:border-white/5 text-center space-y-4 animate-in fade-in">
+          <div className="flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider text-neutral-400">
+            <span>{t('Visual Diagram: Big Stars', 'దృశ్య చిత్రం: పెద్ద నక్షత్రాలు')}</span>
+            <span className="text-amber-500 font-black">⭐</span>
+          </div>
+
+          {/* High-visibility golden stars with drop shadows & number tags */}
+          <div className="flex items-center justify-center gap-4 sm:gap-6 flex-wrap py-2">
+            {[1, 2, 3].map((starNum) => (
+              <div
+                key={starNum}
+                className="flex flex-col items-center justify-center gap-2 p-3 sm:p-4 bg-amber-50 dark:bg-amber-950/40 rounded-3xl border-2 border-amber-400 shadow-md transform hover:scale-105 transition-transform"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="w-16 h-16 sm:w-20 sm:h-20 fill-amber-400 text-amber-500 filter drop-shadow-md"
+                >
+                  <polygon
+                    points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
+                    fill="#F59E0B"
+                    stroke="#D97706"
+                    strokeWidth="1.2"
+                  />
+                </svg>
+                <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-400 text-black shadow-xs">
+                  {t('BIG STAR', 'పెద్ద నక్షత్రం')} #{starNum}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-xs text-neutral-600 dark:text-neutral-300 font-bold bg-white dark:bg-neutral-800 p-2.5 rounded-xl border border-black/5 dark:border-white/5">
+            {t('Count the big stars above and type the number in the box below.', 'పైనున్న పెద్ద నక్షత్రాలను లెక్కించి కింద సంఖ్యను రాయండి.')}
+          </p>
+        </div>
+      );
+    }
+
+    // 2. Question 1 of Big & Small: Elephant vs Ant
+    if (
+      currentQuestion.id === 'q-c1-ch1-1' ||
+      (currentQuestion.diagramType === 'big_small' && currentQuestion.diagramData?.left === 'Elephant')
+    ) {
+      return (
+        <div className="w-full max-w-lg mx-auto bg-neutral-50 dark:bg-neutral-900/60 rounded-3xl p-5 border border-black/5 dark:border-white/5 space-y-2 animate-in fade-in">
+          <div className="text-[11px] font-extrabold uppercase tracking-wider text-neutral-400 text-center">
+            {t('Compare Sizes (Elephant vs Ant)', 'పరిమాణాలను పోల్చండి (ఏనుగు మరియు చీమ)')}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-black/5 dark:border-white/5 text-center">
+              <span className="text-5xl sm:text-6xl mb-2 select-none">🐘</span>
+              <span className="font-extrabold text-sm sm:text-base text-neutral-900 dark:text-white">
+                {t('Elephant', 'ఏనుగు')}
+              </span>
+            </div>
+            <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-black/5 dark:border-white/5 text-center">
+              <span className="text-2xl sm:text-3xl mb-4 mt-3 select-none">🐜</span>
+              <span className="font-extrabold text-sm sm:text-base text-neutral-900 dark:text-white">
+                {t('Ant', 'చీమ')}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 3. Question 2 of Big & Small: Basketball vs Marble
+    if (
+      currentQuestion.id === 'q-c1-ch1-2' ||
+      (currentQuestion.diagramType === 'big_small' && currentQuestion.diagramData?.left === 'Basketball')
+    ) {
+      return (
+        <div className="w-full max-w-lg mx-auto bg-neutral-50 dark:bg-neutral-900/60 rounded-3xl p-5 border border-black/5 dark:border-white/5 space-y-2 animate-in fade-in">
+          <div className="text-[11px] font-extrabold uppercase tracking-wider text-neutral-400 text-center">
+            {t('Compare Sizes (Basketball vs Marble)', 'పరిమాణాలను పోల్చండి (బాస్కెట్‌బాల్ మరియు గోళీ)')}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-black/5 dark:border-white/5 text-center">
+              <span className="text-5xl sm:text-6xl mb-2 select-none">🏀</span>
+              <span className="font-extrabold text-sm sm:text-base text-neutral-900 dark:text-white">
+                {t('Basketball', 'బాస్కెట్‌బాల్')}
+              </span>
+            </div>
+            <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-black/5 dark:border-white/5 text-center">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 shadow-md mb-4 mt-3"></div>
+              <span className="font-extrabold text-sm sm:text-base text-neutral-900 dark:text-white">
+                {t('Marble', 'గోళీ')}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 4. Counting Apples (Class 1 Ch 2 Q1)
+    if (currentQuestion.diagramType === 'counting' && currentQuestion.diagramData?.icon === 'apple') {
+      const count = currentQuestion.diagramData?.count || 5;
+      return (
+        <div className="w-full max-w-lg mx-auto bg-neutral-50 dark:bg-neutral-900/60 rounded-3xl p-5 border border-black/5 dark:border-white/5 text-center space-y-3 animate-in fade-in">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-neutral-400 block">
+            {t('Apples Tray', 'ఆపిల్స్ ట్రే')}
+          </span>
+          <div className="flex items-center justify-center gap-3 sm:gap-4 flex-wrap p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-black/5 dark:border-white/5">
+            {Array.from({ length: count }).map((_, i) => (
+              <span key={i} className="text-3xl sm:text-4xl select-none">🍎</span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // 5. Counting Circles (Class 1 Ch 2 Q2)
+    if (currentQuestion.diagramType === 'counting' && currentQuestion.diagramData?.icon === 'circle') {
+      const count = currentQuestion.diagramData?.count || 7;
+      return (
+        <div className="w-full max-w-lg mx-auto bg-neutral-50 dark:bg-neutral-900/60 rounded-3xl p-5 border border-black/5 dark:border-white/5 text-center space-y-3 animate-in fade-in">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-neutral-400 block">
+            {t('Blue Circles', 'నీలం రంగు వృత్తాలు')}
+          </span>
+          <div className="flex items-center justify-center gap-3 sm:gap-4 flex-wrap p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-black/5 dark:border-white/5">
+            {Array.from({ length: count }).map((_, i) => (
+              <div key={i} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-500 shadow-xs"></div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // 6. Subtraction Apples on Branch (Class 1 Ch 3 Q1)
+    if (currentQuestion.diagramType === 'subtraction_apples' || currentQuestion.id === 'q-c1-ch3-1') {
+      return (
+        <div className="w-full max-w-lg mx-auto bg-neutral-50 dark:bg-neutral-900/60 rounded-3xl p-5 border border-black/5 dark:border-white/5 text-center space-y-3 animate-in fade-in">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-neutral-400 block">
+            {t('Apple Branch (8 apples initially, 3 eaten)', 'ఆపిల్ కొమ్మ (మొదట 8 ఆపిల్స్, 3 తినబడ్డాయి)')}
+          </span>
+          <div className="p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-black/5 dark:border-white/5 space-y-3">
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <span key={`rem-${i}`} className="text-3xl select-none" title="Whole apple">🍎</span>
+              ))}
+              {Array.from({ length: 3 }).map((_, i) => (
+                <span key={`eat-${i}`} className="text-2xl select-none opacity-30 grayscale filter" title="Eaten apple">🍏✕</span>
+              ))}
+            </div>
+            <div className="flex items-center justify-center gap-4 text-xs font-semibold text-neutral-500">
+              <span className="flex items-center gap-1">🍎 {t('Remaining apples', 'మిగిలినవి')}</span>
+              <span className="flex items-center gap-1 opacity-60">🍏✕ {t('Eaten apples', 'తినివేయబడినవి')}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 7. Counting Balloons (Class 1 Ch 3 Q2)
+    if (currentQuestion.id === 'q-c1-ch3-2') {
+      return (
+        <div className="w-full max-w-lg mx-auto bg-neutral-50 dark:bg-neutral-900/60 rounded-3xl p-5 border border-black/5 dark:border-white/5 text-center space-y-3 animate-in fade-in">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-neutral-400 block">
+            {t('Balloons (6 initially, 2 fly away)', 'బెలూన్లు (మొదట 6, 2 ఎగిరిపోయాయి)')}
+          </span>
+          <div className="p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-black/5 dark:border-white/5 flex items-center justify-center gap-3 flex-wrap">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <span key={`stay-${i}`} className="text-3xl select-none">🎈</span>
+            ))}
+            {Array.from({ length: 2 }).map((_, i) => (
+              <span key={`fly-${i}`} className="text-2xl select-none opacity-40" title="Flying away">🎈↗</span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // 8. 2D Shapes Triangle (Class 1 Ch 4 Q1)
+    if (
+      currentQuestion.id === 'q-c1-ch4-1' ||
+      (currentQuestion.diagramType === 'shapes_geom' && currentQuestion.diagramData?.shape === 'triangle')
+    ) {
+      return (
+        <div className="w-full max-w-xs mx-auto bg-neutral-50 dark:bg-neutral-900/60 rounded-3xl p-5 border border-black/5 dark:border-white/5 text-center space-y-2 animate-in fade-in">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-neutral-400 block">
+            {t('Triangle Diagram', 'త్రిభుజం చిత్రం')}
+          </span>
+          <div className="flex justify-center p-3 bg-white dark:bg-neutral-800 rounded-2xl border border-black/5 dark:border-white/5">
+            <svg viewBox="0 0 60 60" className="w-20 h-20">
+              <polygon points="30,8 8,50 52,50" fill="#F97316" stroke="#C2410C" strokeWidth="3" />
+            </svg>
+          </div>
+        </div>
+      );
+    }
+
+    // 9. 2D Shapes Selection (Class 1 Ch 4 Q2)
+    if (currentQuestion.id === 'q-c1-ch4-2') {
+      return (
+        <div className="w-full max-w-md mx-auto bg-neutral-50 dark:bg-neutral-900/60 rounded-3xl p-5 border border-black/5 dark:border-white/5 text-center space-y-3 animate-in fade-in">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-neutral-400 block">
+            {t('Geometric Shapes', 'రేఖాగణిత ఆకారాలు')}
+          </span>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="flex flex-col items-center p-3 bg-white dark:bg-neutral-800 rounded-2xl border border-black/5 dark:border-white/5">
+              <div className="w-12 h-12 rounded-full bg-emerald-500 mb-1"></div>
+              <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{t('Circle', 'వృత్తం')}</span>
+            </div>
+            <div className="flex flex-col items-center p-3 bg-white dark:bg-neutral-800 rounded-2xl border border-black/5 dark:border-white/5">
+              <div className="w-12 h-12 bg-blue-500 rounded-lg mb-1"></div>
+              <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{t('Square', 'చతురస్రం')}</span>
+            </div>
+            <div className="flex flex-col items-center p-3 bg-white dark:bg-neutral-800 rounded-2xl border border-black/5 dark:border-white/5">
+              <svg viewBox="0 0 60 60" className="w-12 h-12 mb-1">
+                <polygon points="30,8 8,50 52,50" fill="#F97316" />
+              </svg>
+              <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{t('Triangle', 'త్రిభుజం')}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -299,24 +615,79 @@ export default function PracticeScreen({
             </div>
           </div>
 
-          {/* Prompt requested: Prominent "Start Test" button below summary card */}
+          {/* Prompt requested: Prominent "Start Test" / "Request Retake" action below summary card */}
           <div className="pt-4 border-t border-neutral-100 dark:border-neutral-700 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center sm:text-left">
-              {t(
-                'When you click Start Test, your answers will be evaluated and synced to the teacher portal.',
-                'మీరు స్టార్ట్ టెస్ట్ క్లిక్ చేయగానే మీ సమాధానాలు ఉపాధ్యాయుని పోర్టల్‌కు అనుసంధానించబడతాయి.'
-              )}
+              {activeChapterTest && activeChapterTest.retry_locked !== false
+                ? activeChapterTest.retake_requested
+                  ? t(
+                      'Retake request is pending teacher approval. Please wait for your teacher to unlock this test.',
+                      'రీటేక్ అభ్యర్థన ఉపాధ్యాయుని అనుమతి కోసం వేచి ఉంది. దయచేసి వేచి ఉండండి.'
+                    )
+                  : activeChapterTest.retake_rejected
+                  ? t(
+                      'Your retake request was reviewed and rejected by your teacher.',
+                      'ఉపాధ్యాయుడు మీ రీటేక్ అభ్యర్థనను తిరస్కరించారు.'
+                    )
+                  : t(
+                      `You already completed this test (Score: ${activeChapterTest.score}/${activeChapterTest.totalQuestions}). Request a retake to attempt it again.`,
+                      `మీరు ఇప్పటికే ఈ పరీక్షను పూర్తి చేసారు (స్కోర్: ${activeChapterTest.score}/${activeChapterTest.totalQuestions}). మళ్లీ రాయడానికి రీటేక్ అభ్యర్థించండి.`
+                    )
+                : t(
+                    'When you click Start Test, your answers will be evaluated and synced to the teacher portal.',
+                    'మీరు స్టార్ట్ టెస్ట్ క్లిక్ చేయగానే మీ సమాధానాలు ఉపాధ్యాయుని పోర్టల్‌కు అనుసంధానించబడతాయి.'
+                  )}
             </p>
 
-            <button
-              type="button"
-              onClick={handleStartTest}
-              className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#D4F670] hover:bg-[#bce451] text-black font-extrabold text-base md:text-lg transition-transform hover:scale-102 active:scale-98 shadow-lg shadow-[#D4F670]/15 flex items-center justify-center gap-2 cursor-pointer shrink-0"
-            >
-              <PlayCircle size={22} className="stroke-[2.5]" />
-              <span>{t('Start Test', 'టెస్ట్ ప్రారంభించండి')}</span>
-              <span>→</span>
-            </button>
+            {activeChapterTest && activeChapterTest.retry_locked !== false ? (
+              activeChapterTest.retake_requested ? (
+                <button
+                  type="button"
+                  disabled
+                  className="w-full sm:w-auto px-6 py-4 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 font-extrabold text-sm flex items-center justify-center gap-2 cursor-not-allowed opacity-90 shadow-xs"
+                >
+                  <Clock size={16} className="animate-spin" />
+                  <span>{t('Request Sent. Waiting for Teacher Approval...', 'అభ్యర్థన పంపబడింది. ఉపాధ్యాయుని అనుమతి కోసం వేచి ఉంది...')}</span>
+                </button>
+              ) : activeChapterTest.retake_rejected ? (
+                <span className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs">
+                  <XCircle size={16} className="text-rose-600 dark:text-rose-400 shrink-0" />
+                  <span>{t('Request Rejected', 'అభ్యర్థన తిరస్కరించబడింది')}</span>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateTestRetakeRequest(activeChapterTest.id, true);
+                    setAllCompletedTests(getCompletedTests());
+                  }}
+                  className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#D4F670] hover:bg-[#bce451] text-black font-extrabold text-base md:text-lg transition-transform hover:scale-102 active:scale-98 shadow-lg shadow-[#D4F670]/15 flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                >
+                  <RotateCcw size={20} className="stroke-[2.5]" />
+                  <span>{t('Request Retake', 'మళ్లీ పరీక్ష కోసం అభ్యర్థించండి')}</span>
+                </button>
+              )
+            ) : activeChapterTest && activeChapterTest.retry_locked === false ? (
+              <button
+                type="button"
+                onClick={handleStartTest}
+                className="w-full sm:w-auto px-8 py-4 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-base md:text-lg transition-transform hover:scale-102 active:scale-98 shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              >
+                <RotateCcw size={22} className="stroke-[2.5]" />
+                <span>{t('Retake Approved! Start Test', 'రీటేక్ ఆమోదించబడింది! పరీక్ష ప్రారంభించండి')}</span>
+                <span>→</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleStartTest}
+                className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#D4F670] hover:bg-[#bce451] text-black font-extrabold text-base md:text-lg transition-transform hover:scale-102 active:scale-98 shadow-lg shadow-[#D4F670]/15 flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              >
+                <PlayCircle size={22} className="stroke-[2.5]" />
+                <span>{t('Start Test', 'టెస్ట్ ప్రారంభించండి')}</span>
+                <span>→</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -359,6 +730,9 @@ export default function PracticeScreen({
               {language === 'te' ? currentQuestion.promptTe : currentQuestion.promptEn}
             </h3>
           </div>
+
+          {/* Question Visual Illustration */}
+          {renderQuestionVisual()}
 
           {/* High-Contrast Fill-in-the-Blank Answer Input */}
           <div className="flex flex-col items-center justify-center gap-3 pt-2">
@@ -519,14 +893,40 @@ export default function PracticeScreen({
               </button>
             )}
 
-            <button
-              type="button"
-              onClick={handleStartTest}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <RotateCcw size={16} />
-              <span>{t('Retake Test', 'మళ్ళీ పరీక్ష రాయండి')}</span>
-            </button>
+            {/* Student-initiated "Request Retake" flow alongside score */}
+            {isRetakeApproved ? (
+              <button
+                type="button"
+                onClick={handleStartTest}
+                className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-transform active:scale-95 animate-in zoom-in-95"
+              >
+                <RotateCcw size={16} />
+                <span>{t('Retake Approved! Start Test', 'రీటేక్ ఆమోదించబడింది! పరీక్ష ప్రారంభించండి')}</span>
+              </button>
+            ) : isRetakeRequested ? (
+              <button
+                type="button"
+                disabled
+                className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700/60 text-amber-800 dark:text-amber-200 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-not-allowed opacity-90 shadow-xs"
+              >
+                <Clock size={16} className="text-amber-500 animate-spin" />
+                <span>{t('Request Sent. Waiting for Teacher Approval...', 'అభ్యర్థన పంపబడింది. ఉపాధ్యాయుని అనుమతి కోసం వేచి ఉంది...')}</span>
+              </button>
+            ) : isRetakeRejected ? (
+              <span className="w-full sm:w-auto px-5 py-3.5 rounded-full bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs">
+                <XCircle size={16} className="text-rose-600 dark:text-rose-400 shrink-0" />
+                <span>{t('Request Rejected by Teacher', 'ఉపాధ్యాయునిచే అభ్యర్థన తిరస్కరించబడింది')}</span>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={handleRequestRetake}
+                className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/40 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-transform active:scale-95"
+              >
+                <RotateCcw size={16} />
+                <span>{t('Request Retake', 'మళ్లీ పరీక్ష కోసం అభ్యర్థించండి')}</span>
+              </button>
+            )}
 
             <button
               type="button"

@@ -1,13 +1,13 @@
-import { CheckCircle2, PlayCircle, BookOpen, Sparkles, Award } from 'lucide-react';
+import { CheckCircle2, PlayCircle, BookOpen, Sparkles, Award, RotateCcw, Clock, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { getCompletedTests, resetOrDeleteTest } from '../utils/testStorage';
+import { getCompletedTests, resetOrDeleteTest, updateTestRetakeRequest } from '../utils/testStorage';
 import { CompletedTestRecord, StudentClass } from '../types';
 
 interface StudentProgressProps {
   t: (en: string, te: string) => string;
   studentName?: string;
   studentClass?: StudentClass;
-  onGoToPractice?: () => void;
+  onGoToPractice?: (chapterId?: string) => void;
 }
 
 export default function StudentProgress({
@@ -19,16 +19,25 @@ export default function StudentProgress({
   const [completedTests, setCompletedTests] = useState<CompletedTestRecord[]>([]);
   const [offset, setOffset] = useState(251.2);
 
-  // Load completed tests on mount
+  // Load completed tests on mount and listen for real-time updates
   useEffect(() => {
-    const all = getCompletedTests();
-    // Filter tests for this student or include all student's tests
-    const studentTests = all.filter(
-      (test) => test.studentName.trim().toLowerCase() === studentName.trim().toLowerCase()
-    );
+    const refresh = () => {
+      const all = getCompletedTests();
+      // Filter tests for this student or include all student's tests
+      const studentTests = all.filter(
+        (test) => test.studentName.trim().toLowerCase() === studentName.trim().toLowerCase()
+      );
+      setCompletedTests(studentTests.length > 0 ? studentTests : all);
+    };
 
-    // If this specific student hasn't taken any, show tests in the system
-    setCompletedTests(studentTests.length > 0 ? studentTests : all);
+    refresh();
+    window.addEventListener('storage', refresh);
+    window.addEventListener('ganitmitra_tests_updated', refresh);
+
+    return () => {
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('ganitmitra_tests_updated', refresh);
+    };
   }, [studentName]);
 
   // Compute stats
@@ -36,16 +45,16 @@ export default function StudentProgress({
   const averageAccuracy =
     totalCompleted > 0
       ? Math.round(completedTests.reduce((sum, item) => sum + item.percentage, 0) / totalCompleted)
-      : 75;
+      : 0;
 
   useEffect(() => {
     // Trigger progress arc animation
-    const progressFraction = Math.min(100, Math.max(10, averageAccuracy)) / 100;
+    const progressFraction = totalCompleted > 0 ? Math.min(100, Math.max(0, averageAccuracy)) / 100 : 0;
     const timer = setTimeout(() => {
       setOffset(251.2 * (1 - progressFraction));
     }, 100);
     return () => clearTimeout(timer);
-  }, [averageAccuracy]);
+  }, [averageAccuracy, totalCompleted]);
 
   const handleResetTest = (testId: string) => {
     resetOrDeleteTest(testId);
@@ -53,7 +62,7 @@ export default function StudentProgress({
   };
 
   return (
-    <div className="animate-in fade-in duration-500 max-w-4xl mx-auto pt-4 md:pt-6 space-y-10 pb-12">
+    <div className="animate-in fade-in duration-500 max-w-4xl mx-auto pt-4 md:pt-6 space-y-8 pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-4">
         <div>
@@ -77,7 +86,7 @@ export default function StudentProgress({
         {onGoToPractice && (
           <button
             type="button"
-            onClick={onGoToPractice}
+            onClick={() => onGoToPractice()}
             className="px-5 py-2.5 rounded-full bg-[#D4F670] hover:bg-[#bce451] text-black font-extrabold text-xs md:text-sm flex items-center gap-2 shadow-xs transition-transform active:scale-95 cursor-pointer self-start sm:self-auto"
           >
             <PlayCircle size={16} />
@@ -87,77 +96,79 @@ export default function StudentProgress({
       </div>
 
       {/* Dynamic Overall Completion & Accuracy - Circular Indicator */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 items-center">
         {/* Progress Arc Card */}
-        <div className="md:col-span-1 bg-white dark:bg-neutral-800 rounded-[32px] p-6 border border-black/5 dark:border-white/5 shadow-xs flex flex-col items-center justify-center text-center">
-          <div className="relative flex items-center justify-center w-48 h-48">
+        <div className="lg:col-span-1 bg-white dark:bg-neutral-800 rounded-[28px] lg:rounded-[32px] p-5 lg:p-6 border border-black/5 dark:border-white/5 shadow-xs flex flex-col items-center justify-center text-center">
+          <div className="relative flex items-center justify-center w-40 h-40 sm:w-44 sm:h-44 lg:w-48 lg:h-48">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
               <circle
                 cx="50"
                 cy="50"
                 r="40"
-                fill="transparent"
+                fill="none"
                 stroke="currentColor"
-                strokeWidth="9"
-                className="text-neutral-200 dark:text-neutral-700"
+                strokeWidth="8"
+                className="text-neutral-200 dark:text-neutral-700/80"
               />
               <circle
                 cx="50"
                 cy="50"
                 r="40"
-                fill="transparent"
-                stroke="currentColor"
-                strokeWidth="9"
+                fill="none"
+                stroke="#D4F670"
+                strokeWidth="8"
                 strokeDasharray="251.2"
                 strokeDashoffset={offset}
-                className="text-app-lime drop-shadow-md transition-all duration-[1500ms] ease-out"
                 strokeLinecap="round"
+                className="transition-all duration-1000 ease-out"
               />
             </svg>
 
-            <div className="absolute flex flex-col items-center justify-center text-center">
-              <span className="text-4xl font-extrabold tracking-tighter text-neutral-900 dark:text-white">
-                {averageAccuracy}%
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+              <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
+                {totalCompleted > 0 ? `${averageAccuracy}%` : '0%'}
               </span>
-              <span className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase mt-0.5">
+              <span className="text-[11px] font-bold text-neutral-400 dark:text-neutral-400 uppercase tracking-wider mt-0.5">
                 {t('Accuracy', 'ఖచ్చితత్వం')}
               </span>
             </div>
           </div>
 
           <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mt-2">
-            {t('Average Test Performance', 'సగటు పరీక్ష ప్రదర్శన')}
+            {totalCompleted > 0
+              ? t('Average Test Performance', 'సగటు పరీక్ష ప్రదర్శన')
+              : t('Complete a test to view accuracy', 'ఖచ్చితత్వాన్ని చూడటానికి పరీక్షను పూర్తి చేయండి')}
           </span>
         </div>
 
         {/* Quick Highlights Stats */}
-        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-5 rounded-3xl bg-white dark:bg-neutral-800 border border-black/5 dark:border-white/5 shadow-xs space-y-1">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center mb-3">
-              <CheckCircle2 size={20} />
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3.5 lg:gap-4">
+          <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-neutral-800 border border-black/5 dark:border-white/5 shadow-xs space-y-1">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center mb-2.5">
+              <CheckCircle2 size={18} />
             </div>
-            <span className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider block">
+            <span className="text-[11px] sm:text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider block">
               {t('Chapters Assessed', 'పరీక్షించిన అధ్యాయాలు')}
             </span>
-            <div className="text-3xl font-black text-neutral-900 dark:text-white">
+            <div className="text-2xl sm:text-3xl font-black text-neutral-900 dark:text-white">
               {totalCompleted} {t('Tests', 'పరీక్షలు')}
             </div>
-            <span className="text-xs text-neutral-500 dark:text-neutral-400 block pt-1">
+            <span className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 block pt-1">
               {t('Directly synchronized with teacher roster', 'ఉపాధ్యాయుల రికార్డులతో అనుసంధానించబడింది')}
             </span>
           </div>
 
-          <div className="p-5 rounded-3xl bg-white dark:bg-neutral-800 border border-black/5 dark:border-white/5 shadow-xs space-y-1">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 flex items-center justify-center mb-3">
-              <Award size={20} />
+          <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-neutral-800 border border-black/5 dark:border-white/5 shadow-xs space-y-1">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 flex items-center justify-center mb-2.5">
+              <Award size={18} />
             </div>
-            <span className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider block">
+            <span className="text-[11px] sm:text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider block">
               {t('Mastery Status', 'సాధనా స్థితి')}
             </span>
-            <div className="text-3xl font-black text-emerald-600 dark:text-[#D4F670]">
+            <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-[#D4F670]">
               {averageAccuracy >= 60 ? t('On Track', 'ముందంజలో') : t('Reviewing', 'సమీక్షలో')}
             </div>
-            <span className="text-xs text-neutral-500 dark:text-neutral-400 block pt-1">
+            <span className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 block pt-1">
               {averageAccuracy >= 60
                 ? t('Ready for higher difficulty drills', 'తదుపరి స్థాయికి సిద్ధం')
                 : t('Practice review concepts recommended', 'కాన్సెప్ట్ సాధన సిఫార్సు చేయబడింది')}
@@ -192,7 +203,11 @@ export default function StudentProgress({
             {completedTests.map((test) => (
               <div
                 key={test.id}
-                className="p-5 rounded-3xl bg-white dark:bg-neutral-800 border border-black/5 dark:border-white/5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-[#D4F670]/60 transition-all"
+                className={`p-5 rounded-3xl bg-white dark:bg-neutral-800 border shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${
+                  test.retake_rejected && !test.retake_requested && test.retry_locked !== false
+                    ? 'border-rose-300 dark:border-rose-800/80 bg-rose-50/20 dark:bg-rose-950/10'
+                    : 'border-black/5 dark:border-white/5 hover:border-[#D4F670]/60'
+                }`}
               >
                 <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -206,6 +221,22 @@ export default function StudentProgress({
                       <Sparkles size={11} />
                       {t('Teacher Synced', 'ఉపాధ్యాయునికి చేరింది')}
                     </span>
+                    {test.retake_requested && (
+                      <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-800 flex items-center gap-1">
+                        <span>⏱️</span> {t('Retake Pending Approval', 'రీటేక్ అనుమతి పెండింగ్‌లో ఉంది')}
+                      </span>
+                    )}
+                    {test.retake_rejected && !test.retake_requested && test.retry_locked !== false && (
+                      <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 flex items-center gap-1 shadow-xs">
+                        <XCircle size={12} className="stroke-[2.5]" />
+                        <span>{t('Request Rejected', 'అభ్యర్థన తిరస్కరించబడింది')}</span>
+                      </span>
+                    )}
+                    {test.retry_locked === false && (
+                      <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
+                        <span>✓</span> {t('Retake Approved', 'రీటేక్ ఆమోదించబడింది')}
+                      </span>
+                    )}
                   </div>
 
                   <h4 className="font-bold text-base md:text-lg text-neutral-900 dark:text-white">
@@ -251,15 +282,39 @@ export default function StudentProgress({
                     </span>
                   </div>
 
-                  {/* Retry & Clear Options */}
-                  <div className="flex items-center gap-2">
-                    {onGoToPractice && (
+                  {/* Retry & Retake Request Options */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {test.retry_locked === false ? (
                       <button
                         type="button"
-                        onClick={() => onGoToPractice()}
-                        className="px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 text-xs font-bold transition-colors cursor-pointer"
+                        onClick={() => onGoToPractice && onGoToPractice(test.chapterId)}
+                        className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs active:scale-95"
                       >
-                        {t('Practice Again', 'మరల సాధన')}
+                        <RotateCcw size={13} />
+                        <span>{t('Retake Approved! Start Test', 'రీటేక్ ఆమోదించబడింది! పరీక్ష ప్రారంభించండి')}</span>
+                      </button>
+                    ) : test.retake_requested ? (
+                      <button
+                        type="button"
+                        disabled
+                        className="px-3.5 py-1.5 rounded-xl bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 text-xs font-bold flex items-center gap-1.5 cursor-not-allowed opacity-90 shadow-xs"
+                      >
+                        <Clock size={13} className="animate-spin" />
+                        <span>{t('Request Sent. Waiting for Teacher Approval...', 'అభ్యర్థన పంపబడింది. ఉపాధ్యాయుని అనుమతి కోసం వేచి ఉంది...')}</span>
+                      </button>
+                    ) : test.retake_rejected ? null : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateTestRetakeRequest(test.id, true);
+                          setCompletedTests((prev) =>
+                            prev.map((item) => (item.id === test.id ? { ...item, retake_requested: true } : item))
+                          );
+                        }}
+                        className="px-3.5 py-1.5 rounded-xl bg-[#D4F670] hover:bg-[#bce451] text-black text-xs font-extrabold transition-transform active:scale-95 shadow-xs flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <RotateCcw size={13} />
+                        <span>{t('Request Retake', 'మళ్లీ పరీక్ష కోసం అభ్యర్థించండి')}</span>
                       </button>
                     )}
 

@@ -60,7 +60,7 @@ function App() {
     } catch {
       // fallback
     }
-    return 'Class 5';
+    return 'Class 1';
   });
   const [taskProgress, setTaskProgress] = useState<number>(68);
   const [studentView, setStudentView] = useState<StudentViewState>('student_home');
@@ -244,7 +244,7 @@ function App() {
   );
 
   return (
-    <div className="flex h-screen w-full bg-neutral-900 text-white font-sans overflow-hidden md:p-4 md:gap-4">
+    <div className="flex h-screen w-full bg-neutral-900 text-white font-sans overflow-hidden md:p-3 lg:p-4 md:gap-3 lg:gap-4">
         
         {/* Mobile Header */}
         <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-neutral-900 z-50 flex items-center justify-between px-4 border-b border-white/10">
@@ -266,27 +266,27 @@ function App() {
 
         {/* Sidebar Navigation */}
         <aside
-          className={`fixed inset-0 z-40 bg-neutral-900 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:w-[280px] flex flex-col justify-between rounded-[32px] overflow-hidden ${
+          className={`fixed inset-0 z-40 bg-neutral-900 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:w-[240px] lg:w-[270px] xl:w-[280px] shrink-0 flex flex-col justify-between rounded-[28px] lg:rounded-[32px] overflow-hidden ${
             isMobileMenuOpen ? 'translate-x-0 pt-16' : '-translate-x-full md:pt-0'
           }`}
         >
-          <div className="py-8 px-6">
-            <div className="hidden md:flex items-center gap-3 mb-10">
+          <div className="py-6 lg:py-8 px-4 lg:px-6">
+            <div className="hidden md:flex items-center gap-3 mb-8 lg:mb-10">
               <button
                 onClick={() => {
                   if (!isTeacher) setStudentView('student_home');
                   setIsMobileMenuOpen(false);
                 }}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition-all w-full cursor-pointer"
+                className="flex items-center gap-3 px-3.5 lg:px-4 py-2.5 lg:py-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition-all w-full cursor-pointer"
               >
-                <LayoutDashboard size={24} className="text-white shrink-0" />
-                <span className="text-xl tracking-tight text-white flex items-center"><AnimatedLogo /></span>
+                <LayoutDashboard size={22} className="text-white shrink-0" />
+                <span className="text-lg lg:text-xl tracking-tight text-white flex items-center"><AnimatedLogo /></span>
               </button>
             </div>
 
             {/* Student Specific Navigation */}
             {!isTeacher && (
-              <nav className="flex flex-col gap-2">
+              <nav className="flex flex-col gap-1.5 lg:gap-2">
                 <NavItem view="student_home" icon={LayoutDashboard} label={t('Home', 'హోమ్')} />
                 <NavItem view="student_learn" icon={BookOpen} label={t('Learn & Revision', 'నేర్చుకోండి & రివిజన్')} />
                 <NavItem view="student_practice" icon={PlayCircle} label={t('Practice', 'సాధన')} />
@@ -299,9 +299,9 @@ function App() {
             {isTeacher && (
               <nav className="flex flex-col gap-2">
                 <button
-                  className="flex items-center gap-4 px-5 py-4 rounded-full transition-all w-full bg-white text-black font-semibold shadow-sm cursor-pointer"
+                  className="flex items-center gap-3 lg:gap-4 px-4 lg:px-5 py-3.5 lg:py-4 rounded-full transition-all w-full bg-white text-black font-semibold shadow-sm cursor-pointer text-sm lg:text-base"
                 >
-                  <Users size={20} />
+                  <Users size={18} />
                   <span>{t('Classroom Monitor', 'తరగతి పర్యవేక్షణ')}</span>
                 </button>
               </nav>
@@ -309,21 +309,21 @@ function App() {
           </div>
 
           {/* Sidebar Footer with Selected Tags just above Log Out */}
-          <div className="p-4 sm:p-5 md:p-6 pb-10 sm:pb-8 md:pb-6 mt-auto flex flex-col gap-3">
+          <div className="p-3 sm:p-4 lg:p-6 pb-8 sm:pb-6 mt-auto flex flex-col gap-2.5 lg:gap-3">
             {/* Selected Tags placed at bottom left of the sidebar */}
             {!isTeacher && (
-              <div className="p-3 sm:p-3.5 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10 text-left select-none space-y-2 md:space-y-2.5 transition-all">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#D4F670] text-[#1a1a1a] font-extrabold text-xs sm:text-sm flex items-center justify-center shrink-0 shadow-xs">
+              <div className="p-2.5 lg:p-3.5 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10 text-left select-none space-y-1.5 lg:space-y-2.5 transition-all">
+                <div className="flex items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-6 h-6 lg:w-7 lg:h-7 rounded-lg bg-[#D4F670] text-[#1a1a1a] font-extrabold text-xs flex items-center justify-center shrink-0 shadow-xs">
                       {username ? username.charAt(0).toUpperCase() : 'S'}
                     </div>
-                    <span className="text-xs sm:text-sm font-bold text-white truncate max-w-[100px] sm:max-w-[120px] md:max-w-[110px]">
+                    <span className="text-xs font-bold text-white truncate max-w-[80px] lg:max-w-[100px]">
                       {username || t('Student', 'విద్యార్థి')}
                     </span>
                   </div>
-                  <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-black px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg bg-[#D4F670] text-[#1a1a1a] shrink-0 shadow-xs">
-                    <GraduationCap size={13} className="shrink-0" />
+                  <span className="inline-flex items-center gap-1 text-[10px] lg:text-xs font-black px-2 py-0.5 rounded-lg bg-[#D4F670] text-[#1a1a1a] shrink-0 shadow-xs">
+                    <GraduationCap size={12} className="shrink-0" />
                     <span>
                       {STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)
                         ? (language === 'te'
@@ -335,10 +335,10 @@ function App() {
                 </div>
 
                 <div className="flex items-center gap-1.5 flex-wrap pt-0.5 border-t border-white/10">
-                  <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md bg-white/15 text-white/90">
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-white/15 text-white/90">
                     {t(studentLevel, studentLevel === 'Beginner' ? 'ప్రారంభం' : studentLevel === 'Intermediate' ? 'మధ్యస్థం' : 'అధునాతనం')}
                   </span>
-                  <span className="text-[10px] sm:text-[11px] font-medium text-neutral-300">
+                  <span className="text-[10px] font-medium text-neutral-300">
                     {STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)
                       ? t(
                           STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)!.categoryEn,
@@ -351,16 +351,16 @@ function App() {
             )}
 
             {isTeacher && (
-              <div className="p-3 sm:p-3.5 rounded-2xl bg-white/10 border border-white/10 text-left select-none">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="text-xs sm:text-sm font-bold text-white truncate">
+              <div className="p-2.5 lg:p-3.5 rounded-2xl bg-white/10 border border-white/10 text-left select-none">
+                <div className="flex items-center justify-between gap-1.5 mb-1">
+                  <span className="text-xs lg:text-sm font-bold text-white truncate">
                     {username || t('Teacher', 'ఉపాధ్యాయుడు')}
                   </span>
-                  <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-[#D4F670] text-[#1a1a1a]">
+                  <span className="text-[10px] lg:text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-[#D4F670] text-[#1a1a1a]">
                     {teacherSubject === 'Mathematics' ? t('Mathematics', 'గణితం') : teacherSubject === 'Basic Arithmetic' ? t('Basic Arithmetic', 'ప్రాథమిక అంకగణితం') : teacherSubject === 'Algebra & Geometry' ? t('Algebra & Geometry', 'బీజగణితం & జ్యామితి') : teacherSubject === 'Science & Math' ? t('Science & Math', 'సైన్స్ & మ్యాథ్స్') : teacherSubject}
                   </span>
                 </div>
-                <span className="text-[10px] sm:text-[11px] text-neutral-300 font-medium">
+                <span className="text-[10px] text-neutral-300 font-medium">
                   {t('Educator Portal', 'ఉపాధ్యాయ పోర్టల్')}
                 </span>
               </div>
@@ -368,25 +368,25 @@ function App() {
 
             <button
               onClick={handleLogout}
-              className="flex items-center gap-4 px-5 py-3.5 w-full rounded-full transition-all text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer font-medium text-sm"
+              className="flex items-center gap-3 px-4 py-2.5 lg:py-3 w-full rounded-full transition-all text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer font-medium text-xs lg:text-sm"
             >
-              <LogOut size={18} />
+              <LogOut size={16} />
               <span>{t('Log Out', 'లాగౌట్')}</span>
             </button>
           </div>
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white mt-16 md:mt-0 md:rounded-[40px] shadow-2xl flex flex-col overflow-hidden relative w-full transition-colors duration-200">
+        <main className="flex-1 min-w-0 bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white mt-16 md:mt-0 md:rounded-[32px] lg:rounded-[40px] shadow-2xl flex flex-col overflow-hidden relative w-full transition-colors duration-200">
           
           {/* Top Header Bar */}
-          <header className="px-4 sm:px-6 md:px-10 pt-4 md:pt-6 pb-3 bg-neutral-50 dark:bg-neutral-900 z-30 sticky top-0 border-b border-black/5 dark:border-white/10 md:border-none transition-colors duration-200">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <header className="px-4 sm:px-6 lg:px-8 xl:px-10 pt-3 md:pt-4 lg:pt-5 pb-3 bg-neutral-50 dark:bg-neutral-900 z-30 sticky top-0 border-b border-black/5 dark:border-white/10 md:border-none transition-colors duration-200">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-3">
               
               {/* User Profile Info & Mobile Actions */}
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-2 shrink-0">
                 <div>
-                  <h2 className="font-bold text-base md:text-lg leading-tight text-neutral-900 dark:text-white">
+                  <h2 className="font-bold text-sm sm:text-base md:text-lg leading-tight text-neutral-900 dark:text-white truncate">
                     {username || (isTeacher ? t('Teacher', 'ఉపాధ్యాయుడు') : t('Student', 'విద్యార్థి'))}
                   </h2>
                 </div>
@@ -418,7 +418,7 @@ function App() {
               </div>
 
               {/* Universal Role-Based Search Bar */}
-              <div className="w-full md:max-w-xs lg:max-w-sm xl:max-w-md md:mx-2">
+              <div className="flex-1 min-w-0 max-w-full md:max-w-xs lg:max-w-sm xl:max-w-md md:mx-2">
                 <RoleBasedSearchBar
                   userRole={userRole || 'student'}
                   t={t}
@@ -433,7 +433,7 @@ function App() {
               </div>
 
               {/* Desktop Actions */}
-              <div className="hidden md:flex items-center gap-2 md:gap-3">
+              <div className="hidden md:flex items-center gap-1.5 lg:gap-2.5 shrink-0">
                 {/* Theme Toggle (Quick Header Access) */}
                 <ThemeToggle theme={theme} onToggle={toggleTheme} t={t} />
 
@@ -442,19 +442,19 @@ function App() {
                   <button
                     type="button"
                     onClick={() => setLanguage('en')}
-                    className={`px-2.5 md:px-3.5 py-1.5 rounded-full text-xs md:text-sm font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    className={`px-2 lg:px-3 py-1 lg:py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                       language === 'en'
                         ? 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 shadow-xs'
                         : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
                     }`}
                     aria-pressed={language === 'en'}
                   >
-                    <span>English</span>
+                    <span>EN</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setLanguage('te')}
-                    className={`px-2.5 md:px-3.5 py-1.5 rounded-full text-xs md:text-sm font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    className={`px-2 lg:px-3 py-1 lg:py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                       language === 'te'
                         ? 'bg-[#D4F670] text-[#2F2F2F] shadow-xs font-extrabold'
                         : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
@@ -468,13 +468,13 @@ function App() {
                 {/* Notification Bell with Tasks indicator */}
                 <button
                   onClick={() => setIsTaskNotificationsOpen(true)}
-                  className="w-10 h-10 md:w-11 md:h-11 bg-white dark:bg-neutral-800 rounded-full flex items-center justify-center shadow-xs border border-black/5 dark:border-white/10 relative hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
+                  className="w-9 h-9 lg:w-10 lg:h-10 bg-white dark:bg-neutral-800 rounded-full flex items-center justify-center shadow-xs border border-black/5 dark:border-white/10 relative hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer shrink-0"
                   title={t('Assigned Tasks Notifications', 'కేటాయించిన పనుల నోటిఫికేషన్లు')}
                   aria-label={t('Assigned Tasks Notifications', 'కేటాయించిన పనుల నోటిఫికేషన్లు')}
                 >
-                  <Bell size={18} className="text-neutral-600 dark:text-neutral-300" />
+                  <Bell size={16} className="text-neutral-600 dark:text-neutral-300" />
                   {tasks.length > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 bg-[#D4F670] text-[#1a1a1a] rounded-full text-[11px] font-extrabold flex items-center justify-center border-2 border-white dark:border-neutral-900 shadow-xs">
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-4.5 px-1 bg-[#D4F670] text-[#1a1a1a] rounded-full text-[10px] font-extrabold flex items-center justify-center border-2 border-white dark:border-neutral-900 shadow-xs">
                       {tasks.length}
                     </span>
                   )}
@@ -483,17 +483,17 @@ function App() {
                 {/* Logout Header Button */}
                 <button
                   onClick={handleLogout}
-                  className="w-10 h-10 md:w-11 md:h-11 bg-white dark:bg-neutral-800 rounded-full flex items-center justify-center shadow-xs border border-black/5 dark:border-white/10 relative hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors text-neutral-500 dark:text-neutral-400 cursor-pointer"
+                  className="w-9 h-9 lg:w-10 lg:h-10 bg-white dark:bg-neutral-800 rounded-full flex items-center justify-center shadow-xs border border-black/5 dark:border-white/10 relative hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors text-neutral-500 dark:text-neutral-400 cursor-pointer shrink-0"
                   title={t('Log Out', 'లాగౌట్')}
                 >
-                  <LogOut size={18} />
+                  <LogOut size={16} />
                 </button>
               </div>
             </div>
           </header>
 
           {/* Scrollable View Content */}
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-10 pb-10 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 xl:px-10 pb-10 custom-scrollbar">
             
             {/* TEACHER EXPERIENCE */}
             {isTeacher && (
@@ -563,7 +563,10 @@ function App() {
                     t={t}
                     studentName={username}
                     studentClass={studentClass}
-                    onGoToPractice={() => setStudentView('student_practice')}
+                    onGoToPractice={(chapterId) => {
+                      if (chapterId) setSelectedChapterId(chapterId);
+                      setStudentView('student_practice');
+                    }}
                   />
                 )}
 

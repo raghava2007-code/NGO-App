@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, CheckCircle2, XCircle, AlertTriangle, X, Users, BookOpen, ClipboardList, Trash2, RotateCcw, Sparkles } from 'lucide-react';
+import { Plus, CheckCircle2, XCircle, AlertTriangle, X, Users, BookOpen, ClipboardList, Trash2, RotateCcw, Sparkles, Clock } from 'lucide-react';
 import { AssignedTask, StudentLevel, CompletedTestRecord } from '../types';
-import { getCompletedTests, resetOrDeleteTest } from '../utils/testStorage';
+import { getCompletedTests, resetOrDeleteTest, approveTestRetake, rejectTestRetake } from '../utils/testStorage';
 
 interface AdminDashboardProps {
   t: (en: string, te: string) => string;
@@ -40,10 +40,10 @@ const initialStudents: StudentRecord[] = [
     progress: 85,
     status: 'on_track',
     chapters: '4 / 6',
-    accuracy: '82%',
+    accuracy: '75%',
     lastActive: 'Today, 10:30 AM',
-    correctCount: 28,
-    incorrectCount: 6,
+    correctCount: 3,
+    incorrectCount: 1,
     recentAnswers: [
       { question: '6 × 7', studentAnswer: '42', correctAnswer: '42', isCorrect: true, timestamp: '10:28 AM' },
       { question: '48 ÷ 6', studentAnswer: '8', correctAnswer: '8', isCorrect: true, timestamp: '10:25 AM' },
@@ -58,10 +58,10 @@ const initialStudents: StudentRecord[] = [
     progress: 60,
     status: 'needs_help',
     chapters: '2 / 6',
-    accuracy: '55%',
+    accuracy: '50%',
     lastActive: 'Yesterday, 4:15 PM',
-    correctCount: 16,
-    incorrectCount: 13,
+    correctCount: 2,
+    incorrectCount: 2,
     recentAnswers: [
       { question: '5 + 2', studentAnswer: '7', correctAnswer: '7', isCorrect: true, timestamp: '4:10 PM' },
       { question: '9 + 4', studentAnswer: '12', correctAnswer: '13', isCorrect: false, timestamp: '4:05 PM' },
@@ -76,10 +76,10 @@ const initialStudents: StudentRecord[] = [
     progress: 92,
     status: 'excelling',
     chapters: '5 / 6',
-    accuracy: '94%',
+    accuracy: '100%',
     lastActive: 'Today, 11:45 AM',
-    correctCount: 45,
-    incorrectCount: 3,
+    correctCount: 3,
+    incorrectCount: 0,
     recentAnswers: [
       { question: '3x = 21', studentAnswer: '7', correctAnswer: '7', isCorrect: true, timestamp: '11:40 AM' },
       { question: '2x + 4 = 16', studentAnswer: '6', correctAnswer: '6', isCorrect: true, timestamp: '11:35 AM' },
@@ -93,10 +93,10 @@ const initialStudents: StudentRecord[] = [
     progress: 78,
     status: 'on_track',
     chapters: '3 / 6',
-    accuracy: '79%',
+    accuracy: '50%',
     lastActive: 'May 18, 2026',
-    correctCount: 22,
-    incorrectCount: 6,
+    correctCount: 1,
+    incorrectCount: 1,
     recentAnswers: [
       { question: '9 × 3', studentAnswer: '27', correctAnswer: '27', isCorrect: true, timestamp: '2:15 PM' },
       { question: '36 ÷ 4', studentAnswer: '8', correctAnswer: '9', isCorrect: false, timestamp: '2:10 PM' },
@@ -122,14 +122,52 @@ export default function AdminDashboard({
 }: AdminDashboardProps) {
   const [students] = useState<StudentRecord[]>(initialStudents);
   const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
-  const [activeTab, setActiveTab] = useState<'tasks' | 'students' | 'curriculum'>('tasks');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'retakes' | 'students' | 'curriculum'>('tasks');
   const [completedTests, setCompletedTests] = useState<CompletedTestRecord[]>([]);
   const [selectedCompletedTest, setSelectedCompletedTest] = useState<CompletedTestRecord | null>(null);
   const [retryNotice, setRetryNotice] = useState<string>('');
 
+  // Strict Filter Rule: Pending retakes MUST ONLY render records where retake_requested === true
+  const pendingRetakes = completedTests.filter((test) => test.retake_requested === true);
+
   useEffect(() => {
-    setCompletedTests(getCompletedTests());
+    const refresh = () => setCompletedTests(getCompletedTests());
+    refresh();
+    window.addEventListener('storage', refresh);
+    window.addEventListener('ganitmitra_tests_updated', refresh);
+    const interval = setInterval(refresh, 2000);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('ganitmitra_tests_updated', refresh);
+    };
   }, []);
+
+  // When teacher clicks "Approve Retake": update backend/local state to retry_locked = false AND retake_requested = false
+  const handleApproveRetake = (testId: string, studentName: string, chapterTitle: string) => {
+    approveTestRetake(testId);
+    setCompletedTests(getCompletedTests());
+    setRetryNotice(
+      t(
+        `Retake approved for ${studentName} on ${chapterTitle}. Retry unlocked.`,
+        `${studentName} కు ${chapterTitle} పై రీటేక్ అనుమతించబడింది. రీట్రై అన్‌లాక్ చేయబడింది.`
+      )
+    );
+    setTimeout(() => setRetryNotice(''), 4500);
+  };
+
+  // When teacher clicks "Reject Retake": update backend/local state to retry_locked = true, retake_requested = false, retake_rejected = true
+  const handleRejectRetake = (testId: string, studentName: string, chapterTitle: string) => {
+    rejectTestRetake(testId);
+    setCompletedTests(getCompletedTests());
+    setRetryNotice(
+      t(
+        `Retake request rejected for ${studentName} on ${chapterTitle}.`,
+        `${studentName} కొరకు ${chapterTitle} రీటేక్ అభ్యర్థన తిరస్కరించబడింది.`
+      )
+    );
+    setTimeout(() => setRetryNotice(''), 4500);
+  };
 
   const handleAllowRetry = (testId: string, studentName: string, chapterTitle: string) => {
     resetOrDeleteTest(testId);
@@ -177,10 +215,10 @@ export default function AdminDashboard({
       
       {/* Tab Navigation & Assign Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-200/80 dark:border-neutral-800 pb-3">
-        <div className="flex items-center gap-2 overflow-x-auto">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
           <button
             onClick={() => setActiveTab('tasks')}
-            className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-3.5 lg:px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
               activeTab === 'tasks' 
                 ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-xs' 
                 : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
@@ -197,9 +235,31 @@ export default function AdminDashboard({
             </span>
           </button>
 
+          {/* Dedicated Tab: Pending Retake Requests */}
+          <button
+            onClick={() => setActiveTab('retakes')}
+            className={`px-3.5 lg:px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
+              activeTab === 'retakes' 
+                ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-xs' 
+                : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+            }`}
+          >
+            <RotateCcw size={16} />
+            <span>{t('Pending Retake Requests', 'పెండింగ్‌లో ఉన్న రీటేక్ అభ్యర్థనలు')}</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full font-extrabold ${
+              pendingRetakes.length > 0
+                ? 'bg-amber-500 text-white animate-pulse'
+                : activeTab === 'retakes' 
+                ? 'bg-neutral-700 text-white dark:bg-neutral-200 dark:text-neutral-900' 
+                : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'
+            }`}>
+              {pendingRetakes.length}
+            </span>
+          </button>
+
           <button
             onClick={() => setActiveTab('students')}
-            className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-3.5 lg:px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
               activeTab === 'students' 
                 ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-xs' 
                 : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
@@ -211,7 +271,7 @@ export default function AdminDashboard({
 
           <button
             onClick={() => setActiveTab('curriculum')}
-            className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-3.5 lg:px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
               activeTab === 'curriculum' 
                 ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-xs' 
                 : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
@@ -230,6 +290,45 @@ export default function AdminDashboard({
           <span>{t('Assign Task', 'టాస్క్ అసైన్ చేయండి')}</span>
         </button>
       </div>
+
+      {/* Global Notice if Retry was Unlocked/Approved/Rejected */}
+      {retryNotice && (
+        <div
+          className={`p-3.5 rounded-2xl text-xs md:text-sm font-bold text-center border animate-in fade-in flex items-center justify-center gap-2 ${
+            retryNotice.includes('rejected') || retryNotice.includes('తిరస్కరించబడింది')
+              ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200 border-rose-300 dark:border-rose-800'
+              : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800'
+          }`}
+        >
+          {retryNotice.includes('rejected') || retryNotice.includes('తిరస్కరించబడింది') ? (
+            <XCircle size={16} />
+          ) : (
+            <Sparkles size={16} />
+          )}
+          <span>{retryNotice}</span>
+        </div>
+      )}
+
+      {/* Prompt Banner when Retakes are pending and teacher is on another tab */}
+      {pendingRetakes.length > 0 && activeTab !== 'retakes' && (
+        <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs sm:text-sm font-bold flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in shadow-xs">
+          <div className="flex items-center gap-2">
+            <Clock size={16} className="text-amber-600 animate-spin shrink-0" />
+            <span>
+              {t(
+                `${pendingRetakes.length} Student Retake Request(s) Awaiting Approval`,
+                `${pendingRetakes.length} విద్యార్థి రీటేక్ అభ్యర్థనలు ఆమోదం కోసం ఎదురుచూస్తున్నాయి`
+              )}
+            </span>
+          </div>
+          <button
+            onClick={() => setActiveTab('retakes')}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold cursor-pointer transition-colors shadow-xs"
+          >
+            {t('Review Retakes', 'రీటేక్‌లను సమీక్షించండి')}
+          </button>
+        </div>
+      )}
 
       {/* TAB 1: ASSIGNMENTS & TASKS */}
       {activeTab === 'tasks' && (
@@ -322,16 +421,111 @@ export default function AdminDashboard({
         </div>
       )}
 
-      {/* TAB 2: STUDENT ROSTER & DETAILED ANSWER LOGS */}
-      {activeTab === 'students' && (
-        <div className="space-y-6">
-          {retryNotice && (
-            <div className="p-3.5 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 text-xs md:text-sm font-bold text-center border border-emerald-300 dark:border-emerald-800 animate-in fade-in flex items-center justify-center gap-2">
-              <Sparkles size={16} />
-              <span>{retryNotice}</span>
+      {/* TAB 2: PENDING RETAKE REQUESTS (STRICT FILTER RULE: ONLY retake_requested === true) */}
+      {activeTab === 'retakes' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-200/80 dark:border-neutral-800 pb-3">
+            <div>
+              <h2 className="text-xl md:text-2xl font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
+                <span>{t('Pending Retake Requests', 'పెండింగ్‌లో ఉన్న రీటేక్ అభ్యర్థనలు')}</span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800 font-extrabold">
+                  {pendingRetakes.length}
+                </span>
+              </h2>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                {t(
+                  'Strictly filtered: Only dynamic assessment records where retake_requested === true are displayed here.',
+                  'ఖచ్చితంగా ఫిల్టర్ చేయబడింది: retake_requested === true ఉన్న విద్యార్థుల అభ్యర్థనలు మాత్రమే ఇక్కడ కనిపిస్తాయి.'
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Empty State: STRICT CLEANUP requirement - starts entirely empty */}
+          {pendingRetakes.length === 0 ? (
+            <div className="bg-white dark:bg-neutral-800 rounded-3xl p-10 md:p-14 text-center border border-black/5 dark:border-white/5 space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-neutral-100 dark:bg-neutral-700 text-neutral-400 dark:text-neutral-300 flex items-center justify-center mx-auto">
+                <CheckCircle2 size={28} />
+              </div>
+              <h3 className="font-bold text-base md:text-lg text-neutral-900 dark:text-white">
+                {t('No Pending Retake Requests', 'పెండింగ్‌లో ఉన్న రీటేక్ అభ్యర్థనలు ఏవీ లేవు')}
+              </h3>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3.5">
+              {pendingRetakes.map((test) => (
+                <div
+                  key={test.id}
+                  className="bg-white dark:bg-neutral-800 rounded-2xl p-5 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-black px-2.5 py-0.5 rounded-lg bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800 flex items-center gap-1">
+                        <Clock size={12} />
+                        {t('Retake Requested', 'రీటేక్ కోరబడింది')}
+                      </span>
+                      <span className="text-xs font-bold text-neutral-900 dark:text-white">
+                        {test.studentName} ({test.studentClass})
+                      </span>
+                      <span className="text-[11px] text-neutral-400">
+                        • {test.timeFormatted}
+                      </span>
+                    </div>
+
+                    <h4 className="font-bold text-base text-neutral-900 dark:text-white">
+                      {t(test.chapterTitleEn, test.chapterTitleTe)}
+                    </h4>
+
+                    <div className="flex items-center gap-3 text-xs text-neutral-600 dark:text-neutral-300">
+                      <span>
+                        {t('Previous Score: ', 'గత స్కోరు: ')}
+                        <span className="font-extrabold text-neutral-900 dark:text-white">
+                          {test.score} / {test.totalQuestions} ({test.percentage}%)
+                        </span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 self-end md:self-center flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCompletedTest(test)}
+                      className="px-3.5 py-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-800 dark:text-neutral-200 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                    >
+                      {t('Inspect Answers', 'సమాధానాలు చూడండి')}
+                    </button>
+
+                    {/* Prompt requirement: Reject retake request option */}
+                    <button
+                      type="button"
+                      onClick={() => handleRejectRetake(test.id, test.studentName, test.chapterTitleEn)}
+                      className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 font-extrabold text-xs sm:text-sm rounded-xl transition-transform active:scale-95 shadow-xs flex items-center gap-1.5 cursor-pointer"
+                      title={t('Reject this retake request', 'ఈ రీటేక్ అభ్యర్థనను తిరస్కరించండి')}
+                    >
+                      <XCircle size={16} />
+                      <span>{t('Reject Request', 'అభ్యర్థనను తిరస్కరించండి')}</span>
+                    </button>
+
+                    {/* Prompt requirement: "Approve Retake" action button */}
+                    <button
+                      type="button"
+                      onClick={() => handleApproveRetake(test.id, test.studentName, test.chapterTitleEn)}
+                      className="px-4 py-2 bg-[#D4F670] hover:bg-[#bce451] text-black font-extrabold text-xs sm:text-sm rounded-xl transition-transform active:scale-95 shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <CheckCircle2 size={16} />
+                      <span>{t('Approve Retake', 'రీటేక్ ఆమోదించండి')}</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
+        </div>
+      )}
 
+      {/* TAB 3: STUDENT ROSTER & DETAILED ANSWER LOGS */}
+      {activeTab === 'students' && (
+        <div className="space-y-6">
           {/* REAL-TIME COMPLETED CHAPTER TESTS & RETRY MANAGEMENT */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -374,6 +568,18 @@ export default function AdminDashboard({
                           <CheckCircle2 size={12} />
                           {t('Live Synced', 'లైవ్ సింక్ అయింది')}
                         </span>
+                        {test.retake_requested && (
+                          <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-md flex items-center gap-1 border border-amber-300 dark:border-amber-800">
+                            <Clock size={11} />
+                            {t('Retake Requested', 'రీటేక్ కోరబడింది')}
+                          </span>
+                        )}
+                        {test.retake_rejected && !test.retake_requested && test.retry_locked !== false && (
+                          <span className="text-[11px] font-bold text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-950 px-2 py-0.5 rounded-md flex items-center gap-1 border border-rose-300 dark:border-rose-800">
+                            <XCircle size={11} />
+                            {t('Retake Rejected', 'రీటేక్ తిరస్కరించబడింది')}
+                          </span>
+                        )}
                       </div>
                       <h4 className="font-bold text-sm md:text-base text-neutral-900 dark:text-white">
                         {t(test.chapterTitleEn, test.chapterTitleTe)}
@@ -405,15 +611,38 @@ export default function AdminDashboard({
                       </button>
 
                       {/* Prompt requirement: Retry management for teachers */}
-                      <button
-                        type="button"
-                        onClick={() => handleAllowRetry(test.id, test.studentName, test.chapterTitleEn)}
-                        className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
-                        title={t('Allow student to retry this chapter test', 'ఈ పరీక్షను విద్యార్థి మళ్ళీ రాయడానికి అనుమతించండి')}
-                      >
-                        <RotateCcw size={13} />
-                        <span>{t('Allow Retry', 'రీట్రై అనుమతించండి')}</span>
-                      </button>
+                      {test.retake_requested ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleRejectRetake(test.id, test.studentName, test.chapterTitleEn)}
+                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+                            title={t('Reject student retake request', 'విద్యార్థి రీటేక్ అభ్యర్థనను తిరస్కరించండి')}
+                          >
+                            <XCircle size={13} />
+                            <span>{t('Reject', 'తిరస్కరించండి')}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleApproveRetake(test.id, test.studentName, test.chapterTitleEn)}
+                            className="px-3 py-1.5 bg-[#D4F670] hover:bg-[#bce451] text-black text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                            title={t('Approve student retake request', 'విద్యార్థి రీటేక్ అభ్యర్థనను ఆమోదించండి')}
+                          >
+                            <CheckCircle2 size={13} />
+                            <span>{t('Approve Retake', 'రీటేక్ ఆమోదించండి')}</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleAllowRetry(test.id, test.studentName, test.chapterTitleEn)}
+                          className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                          title={t('Allow student to retry this chapter test', 'ఈ పరీక్షను విద్యార్థి మళ్ళీ రాయడానికి అనుమతించండి')}
+                        >
+                          <RotateCcw size={13} />
+                          <span>{t('Allow Retry', 'రీట్రై అనుమతించండి')}</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -469,17 +698,21 @@ export default function AdminDashboard({
                 <div className="flex items-center gap-4 flex-wrap md:justify-end">
                   <div className="text-center px-2">
                     <span className="text-[10px] text-neutral-400 dark:text-neutral-500 uppercase font-bold block">{t('Accuracy', 'ఖచ్చితత్వం')}</span>
-                    <span className="text-sm font-bold text-neutral-900 dark:text-white">{student.accuracy}</span>
+                    <span className="text-sm font-bold text-neutral-900 dark:text-white">
+                      {student.recentAnswers && student.recentAnswers.length > 0
+                        ? `${Math.round((student.recentAnswers.filter((a) => a.isCorrect).length / student.recentAnswers.length) * 100)}%`
+                        : student.accuracy}
+                    </span>
                   </div>
 
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 dark:bg-green-950/40 rounded-lg text-xs font-semibold text-green-700 dark:text-green-300">
                     <CheckCircle2 size={13} />
-                    <span>{student.correctCount}</span>
+                    <span>{student.recentAnswers ? student.recentAnswers.filter((a) => a.isCorrect).length : student.correctCount}</span>
                   </div>
 
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 dark:bg-red-950/40 rounded-lg text-xs font-semibold text-red-700 dark:text-red-300">
                     <XCircle size={13} />
-                    <span>{student.incorrectCount}</span>
+                    <span>{student.recentAnswers ? student.recentAnswers.filter((a) => !a.isCorrect).length : student.incorrectCount}</span>
                   </div>
 
                   <button
@@ -580,20 +813,37 @@ export default function AdminDashboard({
             </div>
 
             {/* Score summary */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="p-3 bg-neutral-50 dark:bg-neutral-800 rounded-xl text-center">
-                <span className="text-[10px] text-neutral-400 uppercase font-bold block">{t('Score', 'స్కోర్')}</span>
-                <span className="text-lg font-black text-neutral-900 dark:text-white">
-                  {selectedCompletedTest.score} / {selectedCompletedTest.totalQuestions}
-                </span>
-              </div>
-              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl text-center">
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-bold block">{t('Accuracy', 'ఖచ్చితత్వం')}</span>
-                <span className="text-lg font-black text-emerald-700 dark:text-emerald-300">
-                  {selectedCompletedTest.percentage}%
-                </span>
-              </div>
-            </div>
+            {(() => {
+              const totalAns = selectedCompletedTest.answers?.length || selectedCompletedTest.totalQuestions;
+              const correctAns = selectedCompletedTest.answers
+                ? selectedCompletedTest.answers.filter((a) => a.isCorrect).length
+                : selectedCompletedTest.score;
+              const incorrectAns = totalAns - correctAns;
+              const acc = totalAns > 0 ? Math.round((correctAns / totalAns) * 100) : selectedCompletedTest.percentage;
+
+              return (
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className="p-2.5 bg-neutral-50 dark:bg-neutral-800 rounded-xl text-center">
+                    <span className="text-[10px] text-neutral-400 uppercase font-bold block">{t('Accuracy', 'ఖచ్చితత్వం')}</span>
+                    <span className="text-base font-black text-neutral-900 dark:text-white">
+                      {acc}%
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-green-50 dark:bg-green-950/40 rounded-xl text-center">
+                    <span className="text-[10px] text-green-600 dark:text-green-400 uppercase font-bold block">{t('Correct', 'సరియైనవి')}</span>
+                    <span className="text-base font-black text-green-700 dark:text-green-300">
+                      {correctAns}
+                    </span>
+                  </div>
+                  <div className="p-2.5 bg-red-50 dark:bg-red-950/40 rounded-xl text-center">
+                    <span className="text-[10px] text-red-600 dark:text-red-400 uppercase font-bold block">{t('Incorrect', 'తప్పులు')}</span>
+                    <span className="text-base font-black text-red-700 dark:text-red-300">
+                      {incorrectAns}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Answer items */}
             <div className="space-y-2.5">
@@ -633,18 +883,47 @@ export default function AdminDashboard({
               ))}
             </div>
 
-            <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  handleAllowRetry(selectedCompletedTest.id, selectedCompletedTest.studentName, selectedCompletedTest.chapterTitleEn);
-                  setSelectedCompletedTest(null);
-                }}
-                className="px-3.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
-              >
-                <RotateCcw size={14} />
-                <span>{t('Reset & Allow Retry', 'రీసెట్ చేసి రీట్రై ఇవ్వండి')}</span>
-              </button>
+            <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleAllowRetry(selectedCompletedTest.id, selectedCompletedTest.studentName, selectedCompletedTest.chapterTitleEn);
+                    setSelectedCompletedTest(null);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCcw size={14} />
+                  <span>{t('Reset & Allow Retry', 'రీసెట్ చేసి రీట్రై ఇవ్వండి')}</span>
+                </button>
+
+                {selectedCompletedTest.retake_requested && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleRejectRetake(selectedCompletedTest.id, selectedCompletedTest.studentName, selectedCompletedTest.chapterTitleEn);
+                        setSelectedCompletedTest(null);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <XCircle size={14} />
+                      <span>{t('Reject Request', 'అభ్యర్థనను తిరస్కరించండి')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleApproveRetake(selectedCompletedTest.id, selectedCompletedTest.studentName, selectedCompletedTest.chapterTitleEn);
+                        setSelectedCompletedTest(null);
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-[#D4F670] hover:bg-[#bce451] text-black font-extrabold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <CheckCircle2 size={14} />
+                      <span>{t('Approve Retake', 'రీటేక్ ఆమోదించండి')}</span>
+                    </button>
+                  </>
+                )}
+              </div>
 
               <button
                 type="button"
@@ -686,21 +965,30 @@ export default function AdminDashboard({
               </button>
             </div>
 
-            {/* Quick stats */}
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              <div className="p-2.5 bg-neutral-50 dark:bg-neutral-800 rounded-xl text-center">
-                <span className="text-[10px] text-neutral-400 uppercase font-bold block">{t('Accuracy', 'ఖచ్చితత్వం')}</span>
-                <span className="text-sm font-bold text-neutral-900 dark:text-white">{selectedStudent.accuracy}</span>
-              </div>
-              <div className="p-2.5 bg-green-50 dark:bg-green-950/40 rounded-xl text-center">
-                <span className="text-[10px] text-green-600 dark:text-green-400 uppercase font-bold block">{t('Correct', 'సరియైనవి')}</span>
-                <span className="text-sm font-bold text-green-700 dark:text-green-300">{selectedStudent.correctCount}</span>
-              </div>
-              <div className="p-2.5 bg-red-50 dark:bg-red-950/40 rounded-xl text-center">
-                <span className="text-[10px] text-red-600 dark:text-red-400 uppercase font-bold block">{t('Incorrect', 'తప్పులు')}</span>
-                <span className="text-sm font-bold text-red-700 dark:text-red-300">{selectedStudent.incorrectCount}</span>
-              </div>
-            </div>
+            {/* Quick stats dynamically calculated from recentAnswers */}
+            {(() => {
+              const totalAns = selectedStudent.recentAnswers.length;
+              const correctAns = selectedStudent.recentAnswers.filter((a) => a.isCorrect).length;
+              const incorrectAns = totalAns - correctAns;
+              const acc = totalAns > 0 ? `${Math.round((correctAns / totalAns) * 100)}%` : selectedStudent.accuracy;
+
+              return (
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className="p-2.5 bg-neutral-50 dark:bg-neutral-800 rounded-xl text-center">
+                    <span className="text-[10px] text-neutral-400 uppercase font-bold block">{t('Accuracy', 'ఖచ్చితత్వం')}</span>
+                    <span className="text-sm font-bold text-neutral-900 dark:text-white">{acc}</span>
+                  </div>
+                  <div className="p-2.5 bg-green-50 dark:bg-green-950/40 rounded-xl text-center">
+                    <span className="text-[10px] text-green-600 dark:text-green-400 uppercase font-bold block">{t('Correct', 'సరియైనవి')}</span>
+                    <span className="text-sm font-bold text-green-700 dark:text-green-300">{correctAns}</span>
+                  </div>
+                  <div className="p-2.5 bg-red-50 dark:bg-red-950/40 rounded-xl text-center">
+                    <span className="text-[10px] text-red-600 dark:text-red-400 uppercase font-bold block">{t('Incorrect', 'తప్పులు')}</span>
+                    <span className="text-sm font-bold text-red-700 dark:text-red-300">{incorrectAns}</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="space-y-2.5">
               {selectedStudent.recentAnswers.map((ans, i) => (
@@ -724,7 +1012,7 @@ export default function AdminDashboard({
                             return (
                               <span
                                 key={pIdx}
-                                className="inline-flex items-center justify-center px-1.5 py-0.5 mx-0.5 rounded-md bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 font-black text-xs shadow-xs"
+                                className="mx-1 font-black text-neutral-900 dark:text-white text-sm"
                               >
                                 {symbol}
                               </span>

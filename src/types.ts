@@ -79,6 +79,9 @@ export interface CompletedTestRecord {
   passed: boolean;
   completedAt: string;
   timeFormatted: string;
+  retake_requested?: boolean; // default: false
+  retry_locked?: boolean;     // default: true, becomes false when teacher approves
+  retake_rejected?: boolean;  // default: false, becomes true when teacher rejects
   answers: {
     questionPrompt: string;
     studentAnswer: string;
