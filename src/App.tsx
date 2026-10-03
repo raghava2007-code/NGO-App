@@ -402,7 +402,6 @@ function App() {
 
                 {/* Mobile Quick Action Buttons */}
                 <div className="flex items-center gap-1.5 md:hidden">
-                  <ThemeToggle theme={theme} onToggle={toggleTheme} t={t} />
                   <button
                     onClick={() => setIsTaskNotificationsOpen(true)}
                     className="w-9 h-9 bg-white dark:bg-neutral-800 rounded-full flex items-center justify-center shadow-xs border border-black/5 dark:border-white/10 relative hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
