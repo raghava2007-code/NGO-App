@@ -1,6 +1,6 @@
 import { ArrowRight, BookOpen, PlayCircle } from 'lucide-react';
 import { StudentLevel, AssignedTask, StudentClass } from '../types';
-import { getChaptersForClass, getLevelForStudentClass } from '../data/curriculumData';
+import { getChaptersForLevel } from '../data/curriculumData';
 
 interface StudentDashboardProps {
   t: (en: string, te: string) => string;
@@ -20,12 +20,13 @@ export default function StudentDashboard({
   t,
   onPractice,
   onLearn,
+  level = 'Beginner',
   studentName = 'Student',
   studentClass = 'Class 1',
   onSelectChapter,
 }: StudentDashboardProps) {
-  const studentChapters = getChaptersForClass(studentClass);
-  const currentLevel = getLevelForStudentClass(studentClass);
+  const studentChapters = getChaptersForLevel(level);
+  const currentLevel = level;
 
   // Minimalist shape indicator for mobile & tablet
   const renderShapeIcon = (shapeType: string, numberLabel?: string) => {

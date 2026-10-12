@@ -706,13 +706,18 @@ export function getLevelForStudentClass(studentClass: StudentClass): StudentLeve
   return option ? option.level : 'Beginner';
 }
 
-export function getChaptersForClass(studentClass: StudentClass): ChapterData[] {
-  const level = getLevelForStudentClass(studentClass);
+export function getChaptersForLevel(level: StudentLevel): ChapterData[] {
   const filtered = CHAPTERS_DATA.filter((ch) => ch.level === level);
   if (filtered.length > 0) return filtered;
   return CHAPTERS_DATA.filter((ch) => ch.level === 'Beginner');
 }
 
+export function getChaptersForClass(studentClass: StudentClass): ChapterData[] {
+  const level = getLevelForStudentClass(studentClass);
+  return getChaptersForLevel(level);
+}
+
 export function getChapterById(chapterId: string): ChapterData | undefined {
   return CHAPTERS_DATA.find((ch) => ch.id === chapterId);
 }
+

@@ -47,3 +47,22 @@ export function findUser(role: UserRole, username: string): StoredUser | undefin
     (u) => u.role === role && u.username.trim().toLowerCase() === normalized
   );
 }
+
+export function updateUserPassword(role: UserRole, username: string, newPassword: string): boolean {
+  const users = getStoredUsers();
+  const normalized = username.trim().toLowerCase();
+  const index = users.findIndex(
+    (u) => u.role === role && u.username.trim().toLowerCase() === normalized
+  );
+  if (index !== -1) {
+    users[index].password = newPassword;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+      return true;
+    } catch (e) {
+      console.warn('Error updating user password:', e);
+    }
+  }
+  return false;
+}
+
