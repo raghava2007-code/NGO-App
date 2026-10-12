@@ -1,10 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    font-family: 'Lexend', sans-serif;
+    font-weight: 300;
+  }
+
+  *,
+  *::before,
+  *::after {
+    font-family: 'Lexend', sans-serif;
+  }
+
+  html,
   body {
-    @apply bg-app-bg text-app-text antialiased selection:bg-app-accent selection:text-black;
+    font-family: 'Lexend', sans-serif;
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-app-bg text-app-text antialiased selection:bg-app-accent selection:text-black font-light;
+    font-family: 'Lexend', sans-serif;
+    font-weight: 300;
+  }
+
+  /* Enforce primary default font weight 300 across all body text, UI labels, buttons, inputs, modals, headings, and arithmetic displays */
+  h1, h2, h3, h4, h5, h6,
+  p, span, label, button, input, select, textarea,
+  dialog, [role="dialog"],
+  table, th, td,
+  .arithmetic-display,
+  [data-display="arithmetic"] {
+    font-family: 'Lexend', sans-serif;
+    font-weight: 300;
   }
 }
 

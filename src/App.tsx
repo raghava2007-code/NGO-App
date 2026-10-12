@@ -253,7 +253,7 @@ function App() {
   );
 
   return (
-    <div className="flex h-screen w-full bg-neutral-900 text-white font-sans overflow-hidden md:p-3 lg:p-4 md:gap-3 lg:gap-4">
+    <div className="flex h-screen w-full bg-neutral-900 text-white font-sans font-light overflow-hidden md:p-3 lg:p-4 md:gap-3 lg:gap-4">
         
         {/* Mobile Header */}
         <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-neutral-900 z-50 flex items-center justify-between px-4 border-b border-white/10">

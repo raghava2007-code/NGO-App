@@ -189,7 +189,7 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
   };
 
   return (
-    <div className="min-h-screen bg-[#1F1F1F] flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 font-sans text-[#F4F5F8] relative">
+    <div className="min-h-screen bg-[#1F1F1F] flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 font-sans font-light text-[#F4F5F8] relative">
       {/* Top Bar with Language Selector */}
       <header className="w-full max-w-5xl flex justify-between items-center mb-3 sm:mb-6 px-2 z-20">
         <div className="flex items-center gap-2">
