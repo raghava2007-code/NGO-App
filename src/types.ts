@@ -63,6 +63,7 @@ export interface StoredUser {
   level?: StudentLevel;
   subject?: string;
   createdAt: string;
+  password_reset_requested?: boolean;
 }
 
 export interface CompletedTestRecord {

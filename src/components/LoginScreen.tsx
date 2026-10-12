@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Eye, EyeOff, Calculator, GraduationCap, Presentation, Check, Globe, Lock, User, Sparkles, BookOpen, ArrowRight } from 'lucide-react';
 import AnimatedLogo from './AnimatedLogo';
 import { Language, StudentClass, STUDENT_CLASS_OPTIONS, StudentLevel, UserRole, StoredUser } from '../types';
-import { saveUser, findUser, updateUserPassword } from '../utils/userStorage';
+import { saveUser, findUser, requestPasswordReset } from '../utils/userStorage';
 
 export type { UserRole, StudentLevel };
 
@@ -36,71 +36,49 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
   const [error, setError] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
 
-  // Forgot Password Modal States & Handlers
+  // Forgot Password Request Modal States & Handlers
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const [resetStudentUsername, setResetStudentUsername] = useState('');
-  const [teacherPinInput, setTeacherPinInput] = useState('');
-  const [isPinVerified, setIsPinVerified] = useState(false);
-  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [resetStudentClass, setResetStudentClass] = useState<StudentClass>('Class 1');
+  const [requestSubmitted, setRequestSubmitted] = useState(false);
   const [forgotPasswordError, setForgotPasswordError] = useState('');
   const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState('');
 
-  const handleVerifyTeacherPin = (e: React.FormEvent) => {
+  const handleRequestPasswordReset = (e: React.FormEvent) => {
     e.preventDefault();
     setForgotPasswordError('');
+    setForgotPasswordSuccess('');
     const trimmedName = resetStudentUsername.trim();
     if (!trimmedName) {
-      setForgotPasswordError(t('Please enter your student name.', 'దయచేసి మీ విద్యార్థి పేరును నమోదు చేయండి.'));
+      setForgotPasswordError(t('Please enter your name.', 'దయచేసి మీ పేరును నమోదు చేయండి.'));
       return;
     }
-    const studentUser = findUser('student', trimmedName);
-    if (!studentUser) {
-      setForgotPasswordError(
+
+    const success = requestPasswordReset(trimmedName, resetStudentClass);
+    if (success) {
+      setRequestSubmitted(true);
+      setForgotPasswordSuccess(
         t(
-          `No student account found for "${trimmedName}". Please check the name.`,
-          `"${trimmedName}" పేరుతో విద్యార్థి ఖాతా కనుగొనబడలేదు. దయచేసి పేరును తనిఖీ చేయండి.`
+          'Request sent to teacher. Please wait.',
+          'ఉపాధ్యాయునికి అభ్యర్థన పంపబడింది. దయచేసి వేచి ఉండండి.'
         )
       );
-      return;
-    }
-
-    const correctPin = localStorage.getItem('ganitmitra_teacher_pin') || '8888';
-    if (teacherPinInput.trim() !== correctPin) {
-      setForgotPasswordError(t('Incorrect Teacher PIN', 'తప్పు ఉపాధ్యాయ పిన్'));
-      return;
-    }
-
-    setIsPinVerified(true);
-  };
-
-  const handleUpdateStudentPassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    setForgotPasswordError('');
-    if (!newPasswordInput.trim() || newPasswordInput.trim().length < 3) {
-      setForgotPasswordError(t('Password must be at least 3 characters.', 'పాస్‌వర్డ్ కనీసం 3 అక్షరాలు ఉండాలి.'));
-      return;
-    }
-
-    const success = updateUserPassword('student', resetStudentUsername.trim(), newPasswordInput.trim());
-    if (success) {
-      setForgotPasswordSuccess(t('Password updated successfully', 'పాస్వర్డ్ విజయవంతంగా రీసెట్ చేయబడింది'));
-      setUsername(resetStudentUsername.trim());
-      setPassword(newPasswordInput.trim());
-      setSelectedRole('student');
-      setAuthMode('login');
-
       setTimeout(() => {
         setIsForgotPasswordOpen(false);
-        setIsPinVerified(false);
-        setTeacherPinInput('');
-        setNewPasswordInput('');
         setResetStudentUsername('');
+        setRequestSubmitted(false);
         setForgotPasswordSuccess('');
-      }, 1200);
+      }, 2500);
     } else {
-      setForgotPasswordError(t('Failed to update password. Please try again.', 'పాస్‌వర్డ్ నవీకరించడం విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.'));
+      setForgotPasswordError(
+        t(
+          'Student account not found with this name and class.',
+          'ఈ పేరు మరియు తరగతితో విద్యార్థి ఖాతా కనుగొనబడలేదు.'
+        )
+      );
     }
   };
+
 
 
   // Validation
@@ -519,9 +497,6 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
                       onClick={() => {
                         setResetStudentUsername(username.trim());
                         setIsForgotPasswordOpen(true);
-                        setIsPinVerified(false);
-                        setTeacherPinInput('');
-                        setNewPasswordInput('');
                         setForgotPasswordError('');
                         setForgotPasswordSuccess('');
                       }}
@@ -646,7 +621,7 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
         </div>
       </div>
 
-      {/* Teacher-Verified Student Password Reset Modal */}
+      {/* Student Request Password Reset Modal */}
       {isForgotPasswordOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
           <div className="bg-neutral-900 border border-white/10 rounded-[32px] p-6 sm:p-8 max-w-md w-full space-y-6 shadow-2xl text-white relative animate-in zoom-in-95">
@@ -656,20 +631,17 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
                   <Lock size={18} />
                 </div>
                 <h3 className="text-lg sm:text-xl font-black">
-                  {isPinVerified
-                    ? t('Reset Student Password', 'విద్యార్థి పాస్‌వర్డ్ రీసెట్')
-                    : t('Teacher PIN Required', 'ఉపాధ్యాయ పిన్ అవసరం')}
+                  {t('Request Password Reset', 'పాస్వర్డ్ రీసెట్ అభ్యర్థించండి')}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => {
                   setIsForgotPasswordOpen(false);
-                  setIsPinVerified(false);
-                  setTeacherPinInput('');
-                  setNewPasswordInput('');
+                  setResetStudentUsername('');
                   setForgotPasswordError('');
                   setForgotPasswordSuccess('');
+                  setRequestSubmitted(false);
                 }}
                 className="w-8 h-8 rounded-full bg-neutral-800 text-neutral-400 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
               >
@@ -677,119 +649,83 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
               </button>
             </div>
 
-            {!isPinVerified ? (
-              <form onSubmit={handleVerifyTeacherPin} className="space-y-4">
-                <p className="text-xs text-neutral-400 leading-relaxed">
-                  {t(
-                    'Enter the student name and 4-digit Teacher Master PIN (default: 8888) to authorize student password reset in GanitMitra.',
-                    'GanitMitra లో విద్యార్థి పాస్‌వర్డ్ రీసెట్‌ను అనుమతించడానికి విద్యార్థి పేరు మరియు 4 అంకెల ఉపాధ్యాయ మాస్టర్ పిన్‌ను (డిఫాల్ట్: 8888) నమోదు చేయండి.'
-                  )}
-                </p>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
-                    <User size={14} className="text-[#D4F670]" />
-                    <span>{t('Student Name', 'విద్యార్థి పేరు')}</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={resetStudentUsername}
-                    onChange={(e) => {
-                      setResetStudentUsername(e.target.value);
-                      if (forgotPasswordError) setForgotPasswordError('');
-                    }}
-                    placeholder={t('Enter student username', 'విద్యార్థి పేరును నమోదు చేయండి')}
-                    required
-                    className="w-full bg-neutral-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:border-[#D4F670] outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
-                    <Lock size={14} className="text-[#D4F670]" />
-                    <span>{t('Teacher Master PIN (4 digits)', 'ఉపాధ్యాయ మాస్టర్ పిన్ (4 అంకెలు)')}</span>
-                  </label>
-                  <input
-                    type="password"
-                    maxLength={4}
-                    value={teacherPinInput}
-                    onChange={(e) => {
-                      setTeacherPinInput(e.target.value);
-                      if (forgotPasswordError) setForgotPasswordError('');
-                    }}
-                    placeholder="8888"
-                    required
-                    className="w-full bg-neutral-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white tracking-widest focus:border-[#D4F670] outline-none"
-                  />
-                </div>
-
-                {forgotPasswordError && (
-                  <div className="p-3 bg-red-950/60 border border-red-500/50 rounded-xl text-red-300 text-xs font-semibold text-center">
-                    {forgotPasswordError}
-                  </div>
+            <form onSubmit={handleRequestPasswordReset} className="space-y-4">
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                {t(
+                  'Enter your name and class to request a password reset PIN from your GanitMitra teacher.',
+                  'మీ GanitMitra ఉపాధ్యాయుని నుండి పాస్‌వర్డ్ రీసెట్ పిన్ కోరడానికి మీ పేరు మరియు తరగతిని నమోదు చేయండి.'
                 )}
+              </p>
 
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    className="w-full py-3.5 bg-[#D4F670] hover:bg-[#bce451] text-[#1a1a1a] font-extrabold text-sm rounded-2xl shadow-md transition-transform active:scale-98 cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <span>{t('Verify Teacher PIN', 'పిన్ ధృవీకరించండి')}</span>
-                    <ArrowRight size={16} />
-                  </button>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                  <User size={14} className="text-[#D4F670]" />
+                  <span>{t('Enter Name', 'పేరును నమోదు చేయండి')}</span>
+                </label>
+                <input
+                  type="text"
+                  value={resetStudentUsername}
+                  onChange={(e) => {
+                    setResetStudentUsername(e.target.value);
+                    if (forgotPasswordError) setForgotPasswordError('');
+                  }}
+                  placeholder={t('Enter student name', 'విద్యార్థి పేరును నమోదు చేయండి')}
+                  required
+                  className="w-full bg-neutral-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:border-[#D4F670] outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                  <BookOpen size={14} className="text-[#D4F670]" />
+                  <span>{t('Enter Class', 'తరగతిని ఎంచుకోండి')}</span>
+                </label>
+                <select
+                  value={resetStudentClass}
+                  onChange={(e) => setResetStudentClass(e.target.value as StudentClass)}
+                  className="w-full bg-neutral-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:border-[#D4F670] outline-none cursor-pointer"
+                >
+                  <optgroup label={t('Primary & Middle School (Classes 1 - 8)', 'ప్రాథమిక & మాధ్యమిక (1 - 8 తరగతులు)')} className="bg-neutral-900 text-white font-semibold">
+                    {STUDENT_CLASS_OPTIONS.filter((c) => !['Class 9', 'Class 10', 'Intermediate 1st Year', 'Intermediate 2nd Year'].includes(c.value)).map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {language === 'te' ? c.labelTe : c.labelEn}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label={t('High School & College (Classes 9 - 12)', 'ఉన్నత పాఠశాల & కళాశాల (9 - 12 తరగతులు)')} className="bg-neutral-900 text-white font-semibold">
+                    {STUDENT_CLASS_OPTIONS.filter((c) => ['Class 9', 'Class 10', 'Intermediate 1st Year', 'Intermediate 2nd Year'].includes(c.value)).map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {language === 'te' ? c.labelTe : c.labelEn}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              {forgotPasswordError && (
+                <div className="p-3 bg-red-950/60 border border-red-500/50 rounded-xl text-red-300 text-xs font-semibold text-center">
+                  {forgotPasswordError}
                 </div>
-              </form>
-            ) : (
-              <form onSubmit={handleUpdateStudentPassword} className="space-y-4">
-                <div className="p-3 bg-emerald-950/40 border border-emerald-500/40 rounded-2xl text-xs text-emerald-300 font-bold flex items-center justify-between">
-                  <span>{t('Verified Student:', 'ధృవీకరించబడిన విద్యార్థి:')}</span>
-                  <span className="font-black text-white">{resetStudentUsername}</span>
+              )}
+
+              {forgotPasswordSuccess && (
+                <div className="p-3 bg-emerald-950/60 border border-emerald-500/50 rounded-xl text-emerald-300 text-xs font-semibold text-center flex items-center justify-center gap-2">
+                  <Sparkles size={15} />
+                  <span>{forgotPasswordSuccess}</span>
                 </div>
+              )}
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
-                    <Lock size={14} className="text-[#D4F670]" />
-                    <span>{t('New Password', 'కొత్త పాస్‌వర్డ్')}</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={newPasswordInput}
-                    onChange={(e) => {
-                      setNewPasswordInput(e.target.value);
-                      if (forgotPasswordError) setForgotPasswordError('');
-                      if (forgotPasswordSuccess) setForgotPasswordSuccess('');
-                    }}
-                    placeholder={t('Enter new password (min 3 chars)', 'కొత్త పాస్‌వర్డ్ నమోదు చేయండి (కనీసం 3 అక్షరాలు)')}
-                    required
-                    autoFocus
-                    className="w-full bg-neutral-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:border-[#D4F670] outline-none"
-                  />
-                </div>
-
-                {forgotPasswordError && (
-                  <div className="p-3 bg-red-950/60 border border-red-500/50 rounded-xl text-red-300 text-xs font-semibold text-center">
-                    {forgotPasswordError}
-                  </div>
-                )}
-
-                {forgotPasswordSuccess && (
-                  <div className="p-3 bg-emerald-950/60 border border-emerald-500/50 rounded-xl text-emerald-300 text-xs font-semibold text-center flex items-center justify-center gap-2">
-                    <Sparkles size={15} />
-                    <span>{forgotPasswordSuccess}</span>
-                  </div>
-                )}
-
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    className="w-full py-3.5 bg-[#D4F670] hover:bg-[#bce451] text-[#1a1a1a] font-extrabold text-sm rounded-2xl shadow-md transition-transform active:scale-98 cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <span>{t('Update Password & Log In', 'పాస్‌వర్డ్ నవీకరించి లాగిన్ అవ్వండి')}</span>
-                    <ArrowRight size={16} />
-                  </button>
-                </div>
-              </form>
-            )}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={requestSubmitted}
+                  className="w-full py-3.5 bg-[#D4F670] hover:bg-[#bce451] text-[#1a1a1a] font-extrabold text-sm rounded-2xl shadow-md transition-transform active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span>{t('Request Password', 'పాస్వర్డ్ అభ్యర్థించండి')}</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

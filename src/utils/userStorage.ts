@@ -1,4 +1,4 @@
-import { StoredUser, INITIAL_DEMO_USERS, UserRole } from '../types';
+import { StoredUser, INITIAL_DEMO_USERS, UserRole, StudentClass } from '../types';
 
 const STORAGE_KEY = 'ganitmitra_user_accounts';
 
@@ -65,4 +65,46 @@ export function updateUserPassword(role: UserRole, username: string, newPassword
   }
   return false;
 }
+
+export function requestPasswordReset(username: string, studentClass: StudentClass): boolean {
+  const users = getStoredUsers();
+  const normalized = username.trim().toLowerCase();
+  const index = users.findIndex(
+    (u) => u.role === 'student' && u.username.trim().toLowerCase() === normalized && u.studentClass === studentClass
+  );
+  if (index !== -1) {
+    users[index].password_reset_requested = true;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+      window.dispatchEvent(new Event('ganitmitra_users_updated'));
+      return true;
+    } catch (e) {
+      console.warn('Error requesting password reset:', e);
+    }
+  }
+  return false;
+}
+
+export function getPendingPasswordRequests(): StoredUser[] {
+  const users = getStoredUsers();
+  return users.filter((u) => u.role === 'student' && u.password_reset_requested === true);
+}
+
+export function assignStudentPin(userId: string, newPin: string): boolean {
+  const users = getStoredUsers();
+  const index = users.findIndex((u) => u.id === userId);
+  if (index !== -1) {
+    users[index].password = newPin;
+    users[index].password_reset_requested = false;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+      window.dispatchEvent(new Event('ganitmitra_users_updated'));
+      return true;
+    } catch (e) {
+      console.warn('Error assigning student PIN:', e);
+    }
+  }
+  return false;
+}
+
 

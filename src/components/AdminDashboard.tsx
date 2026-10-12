@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, CheckCircle2, XCircle, AlertTriangle, X, Users, BookOpen, ClipboardList, Trash2, RotateCcw, Sparkles, Clock } from 'lucide-react';
-import { AssignedTask, StudentLevel, CompletedTestRecord } from '../types';
+import { Plus, CheckCircle2, XCircle, AlertTriangle, X, Users, BookOpen, ClipboardList, Trash2, RotateCcw, Sparkles, Clock, Lock } from 'lucide-react';
+import { AssignedTask, StudentLevel, CompletedTestRecord, StoredUser } from '../types';
 import { getCompletedTests, resetOrDeleteTest, approveTestRetake, rejectTestRetake } from '../utils/testStorage';
+import { getPendingPasswordRequests, assignStudentPin } from '../utils/userStorage';
 
 interface AdminDashboardProps {
   t: (en: string, te: string) => string;
@@ -122,16 +123,22 @@ export default function AdminDashboard({
 }: AdminDashboardProps) {
   const [students] = useState<StudentRecord[]>(initialStudents);
   const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
-  const [activeTab, setActiveTab] = useState<'tasks' | 'retakes' | 'students' | 'curriculum'>('tasks');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'retakes' | 'password_requests' | 'students' | 'curriculum'>('tasks');
   const [completedTests, setCompletedTests] = useState<CompletedTestRecord[]>([]);
   const [selectedCompletedTest, setSelectedCompletedTest] = useState<CompletedTestRecord | null>(null);
   const [retryNotice, setRetryNotice] = useState<string>('');
+  const [pendingPasswordRequests, setPendingPasswordRequests] = useState<StoredUser[]>([]);
+  const [pinInputs, setPinInputs] = useState<Record<string, string>>({});
+  const [pinNotice, setPinNotice] = useState<string>('');
 
   // Strict Filter Rule: Pending retakes MUST ONLY render records where retake_requested === true
   const pendingRetakes = completedTests.filter((test) => test.retake_requested === true);
 
   useEffect(() => {
-    const refresh = () => setCompletedTests(getCompletedTests());
+    const refresh = () => {
+      setCompletedTests(getCompletedTests());
+      setPendingPasswordRequests(getPendingPasswordRequests());
+    };
     refresh();
     window.addEventListener('storage', refresh);
     window.addEventListener('ganitmitra_tests_updated', refresh);
@@ -139,9 +146,31 @@ export default function AdminDashboard({
     return () => {
       clearInterval(interval);
       window.removeEventListener('storage', refresh);
-      window.removeEventListener('ganitmitra_tests_updated', refresh);
+      window.removeEventListener('ganitmitra_users_updated', refresh);
     };
   }, []);
+
+  const handleAssignPin = (userId: string, studentName: string) => {
+    const pin = pinInputs[userId] || '';
+    if (!pin.trim() || pin.trim().length !== 4 || isNaN(Number(pin))) {
+      setPinNotice(t('Please enter a valid 4-digit PIN.', 'దయచేసి సరైన 4 అంకెల పిన్ నమోదు చేయండి.'));
+      setTimeout(() => setPinNotice(''), 3500);
+      return;
+    }
+
+    const success = assignStudentPin(userId, pin.trim());
+    if (success) {
+      setPendingPasswordRequests(getPendingPasswordRequests());
+      setPinNotice(
+        t(
+          `PIN assigned successfully for ${studentName}.`,
+          `${studentName} కొరకు పిన్ విజయవంతంగా కేటాయించబడింది.`
+        )
+      );
+      setPinInputs((prev) => ({ ...prev, [userId]: '' }));
+      setTimeout(() => setPinNotice(''), 4000);
+    }
+  };
 
   // When teacher clicks "Approve Retake": update backend/local state to retry_locked = false AND retake_requested = false
   const handleApproveRetake = (testId: string, studentName: string, chapterTitle: string) => {
@@ -257,6 +286,28 @@ export default function AdminDashboard({
             </span>
           </button>
 
+          {/* Dedicated Tab: Pending Password Requests */}
+          <button
+            onClick={() => setActiveTab('password_requests')}
+            className={`px-3.5 lg:px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
+              activeTab === 'password_requests' 
+                ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-xs' 
+                : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+            }`}
+          >
+            <Lock size={16} />
+            <span>{t('Pending Password Requests', 'పెండింగ్‌లో ఉన్న పాస్‌వర్డ్ అభ్యర్థనలు')}</span>
+            <span className={`text-[11px] px-2 py-0.5 rounded-full font-extrabold ${
+              pendingPasswordRequests.length > 0
+                ? 'bg-[#D4F670] text-black animate-pulse'
+                : activeTab === 'password_requests' 
+                ? 'bg-neutral-700 text-white dark:bg-neutral-200 dark:text-neutral-900' 
+                : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'
+            }`}>
+              {pendingPasswordRequests.length}
+            </span>
+          </button>
+
           <button
             onClick={() => setActiveTab('students')}
             className={`px-3.5 lg:px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap ${
@@ -327,6 +378,118 @@ export default function AdminDashboard({
           >
             {t('Review Retakes', 'రీటేక్‌లను సమీక్షించండి')}
           </button>
+        </div>
+      )}
+
+      {/* Prompt Banner when Password Requests are pending and teacher is on another tab */}
+      {pendingPasswordRequests.length > 0 && activeTab !== 'password_requests' && (
+        <div className="p-3.5 rounded-2xl bg-[#D4F670]/20 dark:bg-[#D4F670]/10 border border-[#D4F670]/40 text-neutral-900 dark:text-[#D4F670] text-xs sm:text-sm font-bold flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in shadow-xs">
+          <div className="flex items-center gap-2">
+            <Lock size={16} className="text-[#D4F670] shrink-0" />
+            <span>
+              {t(
+                `${pendingPasswordRequests.length} Student Password Request(s) Pending`,
+                `${pendingPasswordRequests.length} విద్యార్థి పాస్‌వర్డ్ అభ్యర్థనలు పెండింగ్‌లో ఉన్నాయి`
+              )}
+            </span>
+          </div>
+          <button
+            onClick={() => setActiveTab('password_requests')}
+            className="px-3.5 py-1.5 rounded-xl bg-[#D4F670] hover:bg-[#bce451] text-black text-xs font-extrabold cursor-pointer transition-colors shadow-xs"
+          >
+            {t('Review Requests', 'అభ్యర్థనలను సమీక్షించండి')}
+          </button>
+        </div>
+      )}
+
+      {/* TAB: PENDING PASSWORD REQUESTS */}
+      {activeTab === 'password_requests' && (
+        <div className="space-y-4 animate-in fade-in">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl md:text-2xl font-black text-neutral-900 dark:text-white">
+                {t('Pending Password Requests', 'పెండింగ్‌లో ఉన్న పాస్‌వర్డ్ అభ్యర్థనలు')}
+              </h2>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                {t('Assign a secure 4-digit PIN for students requesting a password reset.', 'పాస్‌వర్డ్ రీసెట్ కోరిన విద్యార్థులకు సురక్షితమైన 4 అంకెల పిన్‌ను కేటాయించండి.')}
+              </p>
+            </div>
+            <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">
+              {pendingPasswordRequests.length} {t('Pending', 'పెండింగ్')}
+            </span>
+          </div>
+
+          {pinNotice && (
+            <div className="p-3 bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 rounded-2xl text-xs font-bold text-emerald-800 dark:text-emerald-200 text-center flex items-center justify-center gap-2">
+              <Sparkles size={16} />
+              <span>{pinNotice}</span>
+            </div>
+          )}
+
+          {pendingPasswordRequests.length === 0 ? (
+            <div className="bg-white dark:bg-neutral-800 rounded-3xl p-12 text-center border border-black/5 dark:border-white/5 space-y-3 shadow-xs">
+              <CheckCircle2 size={40} className="text-emerald-500 mx-auto" />
+              <h3 className="text-base font-bold text-neutral-900 dark:text-white">
+                {t('No pending password requests', 'పెండింగ్‌లో పాస్‌వర్డ్ అభ్యర్థనలు ఏవీ లేవు')}
+              </h3>
+              <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                {t('Students who request a password reset from the login screen will appear here instantly.', 'లాగిన్ స్క్రీన్ నుండి పాస్‌వర్డ్ రీసెట్ కోరిన విద్యార్థులు ఇక్కడ తక్షణమే కనిపిస్తారు.')}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {pendingPasswordRequests.map((student) => (
+                <div
+                  key={student.id}
+                  className="bg-white dark:bg-neutral-800 rounded-3xl p-5 border border-black/5 dark:border-white/5 shadow-xs space-y-4 flex flex-col justify-between"
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-[#D4F670]/30 text-neutral-900 dark:text-[#D4F670]">
+                        {student.studentClass || 'Class 1'}
+                      </span>
+                      <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                        <Clock size={12} />
+                        {t('Reset Requested', 'రీసెట్ కోరబడింది')}
+                      </span>
+                    </div>
+
+                    <h3 className="font-extrabold text-lg text-neutral-900 dark:text-white">
+                      {student.username}
+                    </h3>
+                  </div>
+
+                  <div className="pt-3 border-t border-neutral-100 dark:border-neutral-700/60 space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-neutral-400 dark:text-neutral-400 block">
+                        {t('Enter 4-Digit PIN', '4 అంకెల పిన్ నమోదు చేయండి')}
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={4}
+                        value={pinInputs[student.id] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                          setPinInputs((prev) => ({ ...prev, [student.id]: val }));
+                        }}
+                        placeholder="8888"
+                        className="w-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl px-4 py-2.5 text-sm font-bold text-neutral-900 dark:text-white tracking-widest focus:border-[#D4F670] outline-none"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleAssignPin(student.id, student.username)}
+                      className="w-full py-2.5 px-4 bg-[#D4F670] hover:bg-[#bce451] text-black font-extrabold text-xs rounded-xl shadow-xs transition-transform active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <CheckCircle2 size={15} />
+                      <span>{t('Assign PIN', 'పిన్ కేటాయించండి')}</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
