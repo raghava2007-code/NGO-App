@@ -3,71 +3,6 @@ import { queueOfflineAction } from './offlineSync';
 
 const TESTS_STORAGE_KEY = 'ganitmitra_student_tests';
 
-const INITIAL_BASELINE_TESTS: CompletedTestRecord[] = [
-  {
-    id: 'test-seed-1',
-    studentName: 'Sai Kumar',
-    studentClass: 'Class 7',
-    chapterId: 'c7-ch1',
-    chapterNumber: 1,
-    chapterTitleEn: 'Simple Linear Equations (Balance Scale)',
-    chapterTitleTe: 'సరళ సమీకరణాలు (త్రాసు సమతుల్యత)',
-    score: 2,
-    totalQuestions: 2,
-    percentage: 100,
-    passed: true,
-    completedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-    timeFormatted: 'Today, 10:30 AM',
-    retake_requested: false,
-    retry_locked: true,
-    answers: [
-      {
-        questionPrompt: 'Solve for x: 3x = 21',
-        studentAnswer: '7',
-        correctAnswer: '7',
-        isCorrect: true,
-      },
-      {
-        questionPrompt: 'Solve for x: x + 9 = 15',
-        studentAnswer: '6',
-        correctAnswer: '6',
-        isCorrect: true,
-      },
-    ],
-  },
-  {
-    id: 'test-seed-2',
-    studentName: 'Raghava',
-    studentClass: 'Class 5',
-    chapterId: 'c1-ch3',
-    chapterNumber: 3,
-    chapterTitleEn: 'Single-Digit Subtraction (Take Away)',
-    chapterTitleTe: 'ఒకే అంకె తీసివేత (తీసివేయడం)',
-    score: 2,
-    totalQuestions: 2,
-    percentage: 100,
-    passed: true,
-    completedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-    timeFormatted: 'Yesterday, 4:15 PM',
-    retake_requested: false,
-    retry_locked: true,
-    answers: [
-      {
-        questionPrompt: '8 apples minus 3 eaten apples = ?',
-        studentAnswer: '5',
-        correctAnswer: '5',
-        isCorrect: true,
-      },
-      {
-        questionPrompt: '6 − 2 = ?',
-        studentAnswer: '4',
-        correctAnswer: '4',
-        isCorrect: true,
-      },
-    ],
-  },
-];
-
 function notifyTestsUpdated(): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('ganitmitra_tests_updated'));
@@ -80,7 +15,9 @@ export function getCompletedTests(): CompletedTestRecord[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((item) => ({
+        // Filter out any legacy baseline seed tests
+        const realTests = parsed.filter((item) => !item.id?.startsWith('test-seed-'));
+        return realTests.map((item) => ({
           ...item,
           retake_requested: item.retake_requested === true,
           retry_locked: item.retry_locked !== false,
@@ -92,13 +29,7 @@ export function getCompletedTests(): CompletedTestRecord[] {
     console.warn('Error reading completed tests:', e);
   }
 
-  // Prepopulate baseline tests without any retake requests
-  try {
-    localStorage.setItem(TESTS_STORAGE_KEY, JSON.stringify(INITIAL_BASELINE_TESTS));
-  } catch (e) {
-    console.warn('Error seeding tests:', e);
-  }
-  return INITIAL_BASELINE_TESTS;
+  return [];
 }
 
 export function saveCompletedTest(test: CompletedTestRecord): void {

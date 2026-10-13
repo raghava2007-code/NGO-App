@@ -13,98 +13,6 @@ interface AdminDashboardProps {
   teacherSubject?: string;
 }
 
-interface StudentRecord {
-  id: string;
-  name: string;
-  level: StudentLevel;
-  progress: number;
-  status: 'on_track' | 'needs_help' | 'excelling';
-  chapters: string;
-  accuracy: string;
-  lastActive: string;
-  correctCount: number;
-  incorrectCount: number;
-  recentAnswers: {
-    question: string;
-    studentAnswer: string;
-    correctAnswer: string;
-    isCorrect: boolean;
-    timestamp: string;
-  }[];
-}
-
-const initialStudents: StudentRecord[] = [
-  {
-    id: '1',
-    name: 'Sai Kumar',
-    level: 'Intermediate',
-    progress: 85,
-    status: 'on_track',
-    chapters: '4 / 6',
-    accuracy: '75%',
-    lastActive: 'Today, 10:30 AM',
-    correctCount: 3,
-    incorrectCount: 1,
-    recentAnswers: [
-      { question: '6 × 7', studentAnswer: '42', correctAnswer: '42', isCorrect: true, timestamp: '10:28 AM' },
-      { question: '48 ÷ 6', studentAnswer: '8', correctAnswer: '8', isCorrect: true, timestamp: '10:25 AM' },
-      { question: '15 × 4', studentAnswer: '55', correctAnswer: '60', isCorrect: false, timestamp: '10:20 AM' },
-      { question: '7 × 8', studentAnswer: '56', correctAnswer: '56', isCorrect: true, timestamp: '10:15 AM' },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Priya Reddy',
-    level: 'Beginner',
-    progress: 60,
-    status: 'needs_help',
-    chapters: '2 / 6',
-    accuracy: '50%',
-    lastActive: 'Yesterday, 4:15 PM',
-    correctCount: 2,
-    incorrectCount: 2,
-    recentAnswers: [
-      { question: '5 + 2', studentAnswer: '7', correctAnswer: '7', isCorrect: true, timestamp: '4:10 PM' },
-      { question: '9 + 4', studentAnswer: '12', correctAnswer: '13', isCorrect: false, timestamp: '4:05 PM' },
-      { question: '12 - 5', studentAnswer: '6', correctAnswer: '7', isCorrect: false, timestamp: '3:55 PM' },
-      { question: '8 + 3', studentAnswer: '11', correctAnswer: '11', isCorrect: true, timestamp: '3:50 PM' },
-    ],
-  },
-  {
-    id: '3',
-    name: 'Rahul V.',
-    level: 'Advanced',
-    progress: 92,
-    status: 'excelling',
-    chapters: '5 / 6',
-    accuracy: '100%',
-    lastActive: 'Today, 11:45 AM',
-    correctCount: 3,
-    incorrectCount: 0,
-    recentAnswers: [
-      { question: '3x = 21', studentAnswer: '7', correctAnswer: '7', isCorrect: true, timestamp: '11:40 AM' },
-      { question: '2x + 4 = 16', studentAnswer: '6', correctAnswer: '6', isCorrect: true, timestamp: '11:35 AM' },
-      { question: '8² - 14', studentAnswer: '50', correctAnswer: '50', isCorrect: true, timestamp: '11:30 AM' },
-    ],
-  },
-  {
-    id: '4',
-    name: 'Ananya Sharma',
-    level: 'Intermediate',
-    progress: 78,
-    status: 'on_track',
-    chapters: '3 / 6',
-    accuracy: '50%',
-    lastActive: 'May 18, 2026',
-    correctCount: 1,
-    incorrectCount: 1,
-    recentAnswers: [
-      { question: '9 × 3', studentAnswer: '27', correctAnswer: '27', isCorrect: true, timestamp: '2:15 PM' },
-      { question: '36 ÷ 4', studentAnswer: '8', correctAnswer: '9', isCorrect: false, timestamp: '2:10 PM' },
-    ],
-  },
-];
-
 const chapterDifficulties = [
   { chapterEn: 'Ch 1: Number Bonds & Basic Facts', chapterTe: 'అధ్యాయం 1: సంఖ్య బంధాలు & ప్రాథమిక అంశాలు', subtopicEn: 'Making 10s', subtopicTe: '10 గా మార్చడం', difficulty: 'Low', passRate: '94%' },
   { chapterEn: 'Ch 2: Addition & Subtraction (Up to 20)', chapterTe: 'అధ్యాయం 2: కూడిక & తీసివేత (20 వరకు)', subtopicEn: 'Carry-over mechanics', subtopicTe: 'క్యారీ-ఓవర్ పద్ధతి', difficulty: 'High', passRate: '62%' },
@@ -121,8 +29,6 @@ export default function AdminDashboard({
   teacherName,
   teacherSubject = 'Mathematics',
 }: AdminDashboardProps) {
-  const [students] = useState<StudentRecord[]>(initialStudents);
-  const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
   const [activeTab, setActiveTab] = useState<'tasks' | 'retakes' | 'password_requests' | 'students' | 'curriculum'>('tasks');
   const [completedTests, setCompletedTests] = useState<CompletedTestRecord[]>([]);
   const [selectedCompletedTest, setSelectedCompletedTest] = useState<CompletedTestRecord | null>(null);
@@ -317,7 +223,7 @@ export default function AdminDashboard({
             }`}
           >
             <Users size={16} />
-            <span>{t('Student Roster & Logs', 'విద్యార్థుల జాబితా & లాగ్‌లు')}</span>
+            <span>{t('Student Submissions & Logs', 'విద్యార్థుల సమర్పణలు & లాగ్‌లు')}</span>
           </button>
 
           <button
@@ -686,7 +592,7 @@ export default function AdminDashboard({
         </div>
       )}
 
-      {/* TAB 3: STUDENT ROSTER & DETAILED ANSWER LOGS */}
+      {/* TAB 3: LIVE CHAPTER TEST SUBMISSIONS & RETRY MANAGEMENT */}
       {activeTab === 'students' && (
         <div className="space-y-6">
           {/* REAL-TIME COMPLETED CHAPTER TESTS & RETRY MANAGEMENT */}
@@ -812,85 +718,8 @@ export default function AdminDashboard({
               </div>
             )}
           </div>
-
-          {/* GENERAL STUDENT ROSTER */}
-          <div className="space-y-3 pt-4 border-t border-neutral-200/80 dark:border-neutral-800">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base md:text-lg font-bold text-neutral-900 dark:text-white">
-                {t('Classroom Roster & Historical Baseline', 'తరగతి విద్యార్థుల జాబితా')}
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3">
-            {students.map((student) => (
-              <div
-                key={student.id}
-                className="bg-white dark:bg-neutral-800 rounded-2xl p-4 md:p-5 border border-black/5 dark:border-white/5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 ${
-                    student.status === 'needs_help' ? 'bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400' : 'bg-[#D4F670]/40 text-black'
-                  }`}>
-                    {student.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-neutral-900 dark:text-white text-base leading-tight">{student.name}</h4>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400">
-                        {t(
-                          student.level,
-                          student.level === 'Beginner'
-                            ? 'ప్రారంభం'
-                            : student.level === 'Intermediate'
-                            ? 'మధ్యస్థం'
-                            : 'అధునాతనం'
-                        )}
-                      </span>
-                      <span className="text-[11px] text-neutral-400 dark:text-neutral-500">•</span>
-                      <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
-                        {student.lastActive.startsWith('Today')
-                          ? student.lastActive.replace('Today', t('Today', 'ఈరోజు'))
-                          : student.lastActive.startsWith('Yesterday')
-                          ? student.lastActive.replace('Yesterday', t('Yesterday', 'నిన్న'))
-                          : student.lastActive}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 flex-wrap md:justify-end">
-                  <div className="text-center px-2">
-                    <span className="text-[10px] text-neutral-400 dark:text-neutral-500 uppercase font-bold block">{t('Accuracy', 'ఖచ్చితత్వం')}</span>
-                    <span className="text-sm font-bold text-neutral-900 dark:text-white">
-                      {student.recentAnswers && student.recentAnswers.length > 0
-                        ? `${Math.round((student.recentAnswers.filter((a) => a.isCorrect).length / student.recentAnswers.length) * 100)}%`
-                        : student.accuracy}
-                    </span>
-                  </div>
-
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 dark:bg-green-950/40 rounded-lg text-xs font-semibold text-green-700 dark:text-green-300">
-                    <CheckCircle2 size={13} />
-                    <span>{student.recentAnswers ? student.recentAnswers.filter((a) => a.isCorrect).length : student.correctCount}</span>
-                  </div>
-
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-50 dark:bg-red-950/40 rounded-lg text-xs font-semibold text-red-700 dark:text-red-300">
-                    <XCircle size={13} />
-                    <span>{student.recentAnswers ? student.recentAnswers.filter((a) => !a.isCorrect).length : student.incorrectCount}</span>
-                  </div>
-
-                  <button
-                    onClick={() => setSelectedStudent(student)}
-                    className="px-3.5 py-1.5 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-xs font-bold rounded-xl hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors cursor-pointer"
-                  >
-                    {t('Inspect Answers', 'సమాధానాలు చూడండి')}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
-      </div>
-    )}
+      )}
 
       {/* TAB 3: CURRICULUM HEALTH & TOPIC DIFFICULTIES */}
       {activeTab === 'curriculum' && (
@@ -1100,119 +929,7 @@ export default function AdminDashboard({
         </div>
       )}
 
-      {/* STUDENT DETAILED ANSWERS MODAL (BLURRED BACKGROUND) */}
-      {selectedStudent && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
-          onClick={() => setSelectedStudent(null)}
-        >
-          <div 
-            className="bg-white dark:bg-neutral-900 rounded-[28px] max-w-lg w-full p-6 shadow-2xl border border-black/10 dark:border-white/10 relative max-h-[85vh] overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-neutral-100 dark:border-neutral-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#D4F670]/40 text-black font-bold flex items-center justify-center text-lg">
-                  {selectedStudent.name.charAt(0)}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-neutral-900 dark:text-white">{selectedStudent.name}</h3>
-                  <span className="text-xs text-neutral-400 dark:text-neutral-500">{selectedStudent.level} • {t('Submission Log', 'సమర్పించిన వివరాలు')}</span>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedStudent(null)}
-                className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-            </div>
 
-            {/* Quick stats dynamically calculated from recentAnswers */}
-            {(() => {
-              const totalAns = selectedStudent.recentAnswers.length;
-              const correctAns = selectedStudent.recentAnswers.filter((a) => a.isCorrect).length;
-              const incorrectAns = totalAns - correctAns;
-              const acc = totalAns > 0 ? `${Math.round((correctAns / totalAns) * 100)}%` : selectedStudent.accuracy;
-
-              return (
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  <div className="p-2.5 bg-neutral-50 dark:bg-neutral-800 rounded-xl text-center">
-                    <span className="text-[10px] text-neutral-400 uppercase font-bold block">{t('Accuracy', 'ఖచ్చితత్వం')}</span>
-                    <span className="text-sm font-bold text-neutral-900 dark:text-white">{acc}</span>
-                  </div>
-                  <div className="p-2.5 bg-green-50 dark:bg-green-950/40 rounded-xl text-center">
-                    <span className="text-[10px] text-green-600 dark:text-green-400 uppercase font-bold block">{t('Correct', 'సరియైనవి')}</span>
-                    <span className="text-sm font-bold text-green-700 dark:text-green-300">{correctAns}</span>
-                  </div>
-                  <div className="p-2.5 bg-red-50 dark:bg-red-950/40 rounded-xl text-center">
-                    <span className="text-[10px] text-red-600 dark:text-red-400 uppercase font-bold block">{t('Incorrect', 'తప్పులు')}</span>
-                    <span className="text-sm font-bold text-red-700 dark:text-red-300">{incorrectAns}</span>
-                  </div>
-                </div>
-              );
-            })()}
-
-            <div className="space-y-2.5">
-              {selectedStudent.recentAnswers.map((ans, i) => (
-                <div
-                  key={i}
-                  className={`p-3 rounded-xl border flex items-center justify-between ${
-                    ans.isCorrect ? 'bg-green-50/50 dark:bg-green-950/20 border-green-200 dark:border-green-800/60' : 'bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-800/60'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    {ans.isCorrect ? (
-                      <CheckCircle2 size={18} className="text-green-600 dark:text-green-400 shrink-0" />
-                    ) : (
-                      <XCircle size={18} className="text-red-600 dark:text-red-400 shrink-0" />
-                    )}
-                    <div>
-                      <div className="font-bold text-neutral-900 dark:text-white text-sm flex items-center flex-wrap">
-                        {ans.question.split(/([+\-−×÷=])/g).map((part, pIdx) => {
-                          if (['+', '-', '−', '×', '÷', '='].includes(part)) {
-                            const symbol = part === '-' ? '−' : part;
-                            return (
-                              <span
-                                key={pIdx}
-                                className="mx-1 font-black text-neutral-900 dark:text-white text-sm"
-                              >
-                                {symbol}
-                              </span>
-                            );
-                          }
-                          return <span key={pIdx}>{part}</span>;
-                        })}
-                      </div>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                        {t('Answer: ', 'సమాధానం: ')}
-                        <span className={ans.isCorrect ? 'font-bold text-green-700 dark:text-green-300' : 'font-bold text-red-700 dark:text-red-300'}>
-                          {ans.studentAnswer}
-                        </span>
-                        {!ans.isCorrect && (
-                          <span className="text-neutral-500 dark:text-neutral-400 ml-1.5">
-                            ({t('Correct: ', 'సరైనది: ')}<span className="font-semibold text-green-700 dark:text-green-300">{ans.correctAnswer}</span>)
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-[11px] text-neutral-400 dark:text-neutral-500">{ans.timestamp}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800 flex justify-end">
-              <button
-                onClick={() => setSelectedStudent(null)}
-                className="bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 px-4 py-2 rounded-xl font-bold text-xs cursor-pointer"
-              >
-                {t('Close', 'మూసివేయి')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* QUICK ASSIGN TASK MODAL (BLURRED BACKGROUND) */}
       {isAssignModalOpen && (

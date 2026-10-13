@@ -176,10 +176,15 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
       setSuccessNotice(t('Login successful! Redirecting...', 'లాగిన్ విజయవంతమైంది! దారి మళ్లిస్తోంది...'));
 
       setTimeout(() => {
+        const studentLevelFromClass = matchedUser.studentClass
+          ? STUDENT_CLASS_OPTIONS.find((c) => c.value === matchedUser.studentClass)?.level
+          : undefined;
         onLoginSuccess({
           role: matchedUser.role,
           username: matchedUser.username,
-          level: selectedRole === 'student' ? selectedLevel : (matchedUser.level || 'Advanced'),
+          level: selectedRole === 'student'
+            ? (matchedUser.level || studentLevelFromClass || 'Beginner')
+            : (matchedUser.level || 'Advanced'),
           subject: matchedUser.subject,
           studentClass: matchedUser.studentClass,
         });
@@ -201,32 +206,34 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-neutral-800/90 backdrop-blur-md p-1 rounded-2xl border border-white/10 shadow-sm">
-          <Globe size={14} className="text-[#D4F670] ml-2 hidden sm:inline" />
-          <button
-            type="button"
-            onClick={() => setLanguage('en')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-              language === 'en'
-                ? 'bg-[#D4F670] text-[#1a1a1a] shadow-xs'
-                : 'text-neutral-300 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <span>English</span>
-            {language === 'en' && <Check size={12} strokeWidth={3} />}
-          </button>
-          <button
-            type="button"
-            onClick={() => setLanguage('te')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-              language === 'te'
-                ? 'bg-[#D4F670] text-[#1a1a1a] shadow-xs'
-                : 'text-neutral-300 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <span>తెలుగు</span>
-            {language === 'te' && <Check size={12} strokeWidth={3} />}
-          </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 bg-neutral-800/90 backdrop-blur-md p-1 rounded-2xl border border-white/10 shadow-sm">
+            <Globe size={14} className="text-[#D4F670] ml-2 hidden sm:inline" />
+            <button
+              type="button"
+              onClick={() => setLanguage('en')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                language === 'en'
+                  ? 'bg-[#D4F670] text-[#1a1a1a] shadow-xs'
+                  : 'text-neutral-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <span>English</span>
+              {language === 'en' && <Check size={12} strokeWidth={3} />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage('te')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                language === 'te'
+                  ? 'bg-[#D4F670] text-[#1a1a1a] shadow-xs'
+                  : 'text-neutral-300 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <span>తెలుగు</span>
+              {language === 'te' && <Check size={12} strokeWidth={3} />}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -397,56 +404,31 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
                   </label>
                   <select
                     value={studentClass}
-                    onChange={(e) => setStudentClass(e.target.value as StudentClass)}
-                    className="w-full bg-neutral-800/80 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] outline-none transition-all cursor-pointer"
+                    onChange={(e) => {
+                      const newClass = e.target.value as StudentClass;
+                      setStudentClass(newClass);
+                      const matched = STUDENT_CLASS_OPTIONS.find((c) => c.value === newClass);
+                      if (matched) {
+                        setSelectedLevel(matched.level);
+                      }
+                    }}
+                    className="w-full bg-neutral-800/80 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] outline-none transition-all cursor-pointer font-light"
                   >
                     <optgroup label={t('Primary & Middle School (Classes 1 - 8)', 'ప్రాథమిక & మాధ్యమిక (1 - 8 తరగతులు)')} className="bg-neutral-900 text-white font-semibold">
                       {STUDENT_CLASS_OPTIONS.filter((c) => !['Class 9', 'Class 10', 'Intermediate 1st Year', 'Intermediate 2nd Year'].includes(c.value)).map((c) => (
                         <option key={c.value} value={c.value}>
-                          {language === 'te' ? c.labelTe : c.labelEn} ({c.level})
+                          {language === 'te' ? c.labelTe : c.labelEn}
                         </option>
                       ))}
                     </optgroup>
                     <optgroup label={t('High School & College (Classes 9 - 12)', 'ఉన్నత పాఠశాల & కళాశాల (9 - 12 తరగతులు)')} className="bg-neutral-900 text-white font-semibold">
                       {STUDENT_CLASS_OPTIONS.filter((c) => ['Class 9', 'Class 10', 'Intermediate 1st Year', 'Intermediate 2nd Year'].includes(c.value)).map((c) => (
                         <option key={c.value} value={c.value}>
-                          {language === 'te' ? c.labelTe : c.labelEn} ({c.level})
+                          {language === 'te' ? c.labelTe : c.labelEn}
                         </option>
                       ))}
                     </optgroup>
                   </select>
-                </div>
-              )}
-
-              {/* Level Selection (Only for Student Create Account) */}
-              {selectedRole === 'student' && authMode === 'create' && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-[#D4F670]" />
-                    <span>{t('Level Selection', 'స్థాయి ఎంపిక')}</span>
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['Beginner', 'Intermediate', 'Advanced'] as StudentLevel[]).map((lvl) => (
-                      <button
-                        key={lvl}
-                        type="button"
-                        onClick={() => setSelectedLevel(lvl)}
-                        className={`py-2 px-2 rounded-xl text-xs font-extrabold border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
-                          selectedLevel === lvl
-                            ? 'bg-[#D4F670] text-[#1a1a1a] border-[#D4F670] shadow-sm font-black'
-                            : 'bg-neutral-800/80 text-neutral-300 border-white/10 hover:text-white'
-                        }`}
-                      >
-                        <span>
-                          {lvl === 'Beginner'
-                            ? t('Beginner', 'ప్రారంభ')
-                            : lvl === 'Intermediate'
-                            ? t('Intermediate', 'మధ్యస్థ')
-                            : t('Advanced', 'ఉన్నత')}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
                 </div>
               )}
 
@@ -485,26 +467,12 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
               )}
 
               {/* Password field */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
                     <Lock size={14} className="text-[#D4F670]" />
                     <span>{t('Password', 'పాస్‌వర్డ్')}</span>
                   </label>
-                  {selectedRole === 'student' && authMode === 'login' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setResetStudentUsername(username.trim());
-                        setIsForgotPasswordOpen(true);
-                        setForgotPasswordError('');
-                        setForgotPasswordSuccess('');
-                      }}
-                      className="text-xs font-bold text-[#D4F670] hover:underline cursor-pointer transition-colors"
-                    >
-                      {t('Forgot Password?', 'పాస్‌వర్డ్ మర్చిపోయారా?')}
-                    </button>
-                  )}
                 </div>
                 <div className="relative">
                   <input
@@ -531,39 +499,27 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+
+                {/* Forgot Password Button - Repositioned below password section with border and increased font */}
+                {selectedRole === 'student' && authMode === 'login' && (
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetStudentUsername(username.trim());
+                        setIsForgotPasswordOpen(true);
+                        setForgotPasswordError('');
+                        setForgotPasswordSuccess('');
+                      }}
+                      className="text-sm font-light text-[#D4F670] hover:text-white border border-[#D4F670]/40 hover:border-[#D4F670] bg-neutral-800/80 hover:bg-neutral-800 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-sm active:scale-95"
+                    >
+                      <span>{t('Forgot Password?', 'పాస్‌వర్డ్ మర్చిపోయారా?')}</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Level Selection (Only for Student Log In) */}
-              {selectedRole === 'student' && authMode === 'login' && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-[#D4F670]" />
-                    <span>{t('Level Selection', 'స్థాయి ఎంపిక')}</span>
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['Beginner', 'Intermediate', 'Advanced'] as StudentLevel[]).map((lvl) => (
-                      <button
-                        key={lvl}
-                        type="button"
-                        onClick={() => setSelectedLevel(lvl)}
-                        className={`py-2 px-2 rounded-xl text-xs font-extrabold border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
-                          selectedLevel === lvl
-                            ? 'bg-[#D4F670] text-[#1a1a1a] border-[#D4F670] shadow-sm font-black'
-                            : 'bg-neutral-800/80 text-neutral-300 border-white/10 hover:text-white'
-                        }`}
-                      >
-                        <span>
-                          {lvl === 'Beginner'
-                            ? t('Beginner', 'ప్రారంభ')
-                            : lvl === 'Intermediate'
-                            ? t('Intermediate', 'మధ్యస్థ')
-                            : t('Advanced', 'ఉన్నత')}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+
 
               {/* Error Notice */}
               {error && (

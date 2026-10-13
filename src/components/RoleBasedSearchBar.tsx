@@ -265,18 +265,18 @@ export default function RoleBasedSearchBar({
         },
       },
       {
-        id: 'teacher-roster',
-        titleEn: 'Student Roster & Answer Logs',
-        titleTe: 'విద్యార్థుల జాబితా & సమాధానాలు',
+        id: 'teacher-submissions',
+        titleEn: 'Student Test Submissions & Logs',
+        titleTe: 'విద్యార్థుల పరీక్ష సమర్పణలు & సమాధానాలు',
         categoryEn: 'Classroom Data',
         categoryTe: 'తరగతి సమాచారం',
-        descriptionEn: 'Inspect question-by-question student submissions and accuracy logs',
-        descriptionTe: 'విద్యార్థుల సమాధానాలు మరియు ఖచ్చితత్వ లాగ్‌లను పరిశీలించండి',
-        keywords: ['roster', 'students', 'answers', 'inspect', 'submissions', 'విద్యార్థులు'],
+        descriptionEn: 'Inspect question-by-question student submissions and retake requests',
+        descriptionTe: 'విద్యార్థుల సమాధానాలు మరియు రీటేక్ అభ్యర్థనలను పరిశీలించండి',
+        keywords: ['submissions', 'students', 'answers', 'inspect', 'tests', 'విద్యార్థులు'],
         icon: ShieldCheck,
         role: 'teacher',
         action: () => {
-          // Focuses roster
+          // Focuses submissions
         },
       },
       {
@@ -400,7 +400,7 @@ export default function RoleBasedSearchBar({
           placeholder={
             isStudent
               ? t('Search topics, practice, revision...', 'విషయాలు, సాధన, రివిజన్ వెతకండి...')
-              : t('Search teacher tools, roster, tasks...', 'ఉపాధ్యాయ సాధనాలు, విద్యార్థుల వివరాలు...')
+              : t('Search teacher tools, submissions, tasks...', 'ఉపాధ్యాయ సాధనాలు, సమర్పణలు, టాస్క్‌లు...')
           }
           className="w-full pl-9 pr-8 py-2 md:py-2.5 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 text-xs md:text-sm rounded-full border border-black/10 dark:border-white/10 shadow-xs focus:outline-none focus:ring-2 focus:ring-[#D4F670] dark:focus:ring-[#D4F670] transition-all"
           aria-label={t('Search GanitMitra features', 'గణిత్‌మిత్ర ఫీచర్లను వెతకండి')}
@@ -446,7 +446,7 @@ export default function RoleBasedSearchBar({
                 <p className="text-xs opacity-75">
                   {isStudent
                     ? t('Try searching for "practice", "fractions", "bonds", or "progress"', '"సాధన", "కూడిక", "రివిజన్", లేదా "పురోగతి" అని వెతకండి')
-                    : t('Try searching for "assignments", "roster", or "curriculum"', '"టాస్క్", "విద్యార్థులు", లేదా "విశ్లేషణ" అని వెతకండి')}
+                    : t('Try searching for "assignments", "submissions", or "curriculum"', '"టాస్క్", "సమర్పణలు", లేదా "విశ్లేషణ" అని వెతకండి')}
                 </p>
               </div>
             ) : (

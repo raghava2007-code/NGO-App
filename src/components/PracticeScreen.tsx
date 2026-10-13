@@ -721,11 +721,14 @@ export default function PracticeScreen({
             </div>
           </div>
 
-          {/* Question Prompt */}
-          <div className="text-center sm:text-left space-y-1">
-            <h3 className="text-xl md:text-2xl font-bold text-neutral-900 dark:text-white leading-relaxed">
-              {language === 'te' ? currentQuestion.promptTe : currentQuestion.promptEn}
+          {/* Question Prompt - Dual Language Display (English first, followed immediately by Telugu stacked vertically) */}
+          <div className="text-center sm:text-left space-y-2">
+            <h3 className="text-xl md:text-2xl font-light text-neutral-900 dark:text-white leading-relaxed">
+              {currentQuestion.promptEn}
             </h3>
+            <p className="text-lg md:text-xl font-light text-neutral-600 dark:text-neutral-300 leading-relaxed">
+              {currentQuestion.promptTe}
+            </p>
           </div>
 
           {/* Question Visual Illustration */}

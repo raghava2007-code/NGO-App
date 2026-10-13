@@ -156,7 +156,7 @@ export default function StudentProgress({
               {totalCompleted} {t('Tests', 'పరీక్షలు')}
             </div>
             <span className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 block pt-1">
-              {t('Directly synchronized with teacher roster', 'ఉపాధ్యాయుల రికార్డులతో అనుసంధానించబడింది')}
+              {t('Directly synchronized with teacher dashboard', 'ఉపాధ్యాయుల డ్యాష్‌బోర్డ్‌తో అనుసంధానించబడింది')}
             </span>
           </div>
         </div>
