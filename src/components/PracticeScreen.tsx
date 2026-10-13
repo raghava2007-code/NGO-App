@@ -287,8 +287,7 @@ export default function PracticeScreen({
     if (
       currentQuestion.id === 'q-c1-ch1-3' ||
       (currentQuestion.diagramType === 'counting' && currentQuestion.diagramData?.itemType === 'big_star') ||
-      currentQuestion.promptEn.toLowerCase().includes('big star') ||
-      currentQuestion.promptEn.toLowerCase().includes('stars')
+      currentQuestion.promptEn.toLowerCase().includes('big star')
     ) {
       return (
         <div className="w-full max-w-lg mx-auto bg-neutral-50 dark:bg-neutral-900/60 rounded-3xl p-6 border border-black/5 dark:border-white/5 text-center space-y-4 animate-in fade-in">

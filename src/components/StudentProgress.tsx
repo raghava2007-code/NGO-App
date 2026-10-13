@@ -1,4 +1,4 @@
-import { CheckCircle2, PlayCircle, BookOpen, Sparkles, RotateCcw, Clock, XCircle, Download } from 'lucide-react';
+import { CheckCircle2, PlayCircle, BookOpen, Sparkles, RotateCcw, Clock, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCompletedTests, resetOrDeleteTest, updateTestRetakeRequest } from '../utils/testStorage';
 import { CompletedTestRecord, StudentClass } from '../types';
@@ -84,16 +84,6 @@ export default function StudentProgress({
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="px-5 py-2.5 rounded-full bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 font-extrabold text-xs md:text-sm flex items-center gap-2 shadow-xs transition-transform active:scale-95 cursor-pointer"
-            title={t('Print or save progress report as PDF', 'పురోగతి నివేదికను ప్రింట్ చేయండి లేదా PDF రూపంలో సేవ్ చేయండి')}
-          >
-            <Download size={16} />
-            <span>{t('Download PDF Report', 'PDF నివేదికను డౌన్‌లోడ్ చేయండి')}</span>
-          </button>
-
           {onGoToPractice && (
             <button
               type="button"
