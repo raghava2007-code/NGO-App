@@ -194,7 +194,7 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
   };
 
   return (
-    <div className="min-h-screen bg-[#1F1F1F] flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 font-sans font-light text-[#F4F5F8] relative">
+    <div className="min-h-[calc(100vh-48px)] flex-1 bg-[#1F1F1F] flex flex-col items-center justify-center p-3 sm:p-6 md:p-8 font-sans font-light text-[#F4F5F8] relative">
       {/* Top Bar with Language Selector */}
       <header className="w-full max-w-5xl flex justify-between items-center mb-3 sm:mb-6 px-2 z-20">
         <div className="flex items-center gap-2">
@@ -206,7 +206,7 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 sm:gap-4">
           <div className="flex items-center gap-1.5 bg-neutral-800/90 backdrop-blur-md p-1 rounded-2xl border border-white/10 shadow-sm">
             <Globe size={14} className="text-[#D4F670] ml-2 hidden sm:inline" />
             <button
@@ -234,6 +234,20 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
               {language === 'te' && <Check size={12} strokeWidth={3} />}
             </button>
           </div>
+
+          {/* Official NGO Logo (top-right of login page) */}
+          <img
+            src="/ngo-logo.png"
+            alt="NGO Logo"
+            className="h-9 sm:h-11 w-auto max-w-[120px] sm:max-w-[160px] object-contain rounded-md"
+            onError={(e) => {
+              // Hide broken image placeholder until file is uploaded
+              (e.currentTarget as HTMLElement).style.display = 'none';
+            }}
+            onLoad={(e) => {
+              (e.currentTarget as HTMLElement).style.display = 'block';
+            }}
+          />
         </div>
       </header>
 

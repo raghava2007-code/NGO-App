@@ -10,6 +10,7 @@ import LoginScreen, { UserRole, StudentLevel } from './components/LoginScreen';
 import AnimatedLogo from './components/AnimatedLogo';
 import ThemeToggle from './components/ThemeToggle';
 import RoleBasedSearchBar from './components/RoleBasedSearchBar';
+import AswaHeader from './components/AswaHeader';
 import { AssignedTask, ThemeMode, StudentClass, STUDENT_CLASS_OPTIONS } from './types';
 import { subscribeNetworkStatus } from './utils/offlineSync';
 
@@ -222,17 +223,6 @@ function App() {
     setIsMobileMenuOpen(false);
   };
 
-  if (!isAuthenticated) {
-    return (
-      <LoginScreen
-        onLoginSuccess={handleLoginSuccess}
-        t={t}
-        language={language}
-        setLanguage={setLanguage}
-      />
-    );
-  }
-
   const isTeacher = userRole === 'teacher';
 
   const NavItem = ({ view, icon: Icon, label }: { view: StudentViewState; icon: any; label: string }) => (
@@ -253,32 +243,45 @@ function App() {
   );
 
   return (
-    <div className="flex h-screen w-full bg-neutral-900 text-white font-sans font-light overflow-hidden md:p-3 lg:p-4 md:gap-3 lg:gap-4">
-        
-        {/* Mobile Header */}
-        <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-neutral-900 z-50 flex items-center justify-between px-4 border-b border-white/10">
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition-all cursor-pointer"
-          >
-            {isMobileMenuOpen ? <X size={20} className="text-white" /> : <LayoutDashboard size={20} className="text-white" />}
-            <span className="font-semibold text-white">
-              {isTeacher ? t('Teacher Portal', 'ఉపాధ్యాయుల పోర్టల్') : t('Student Menu', 'విద్యార్థి మెను')}
-            </span>
-          </button>
-          
-          <div className="flex items-center gap-2">
-            <ThemeToggle theme={theme} onToggle={toggleTheme} t={t} />
-            <span className="text-lg font-bold text-white tracking-tight flex items-center"><AnimatedLogo /></span>
-          </div>
-        </div>
+    <div className={`flex flex-col h-screen w-full ${!isAuthenticated ? 'bg-[#1F1F1F]' : 'bg-neutral-900'} text-white font-sans font-light overflow-hidden`}>
+      {/* Persistent ASWA Header across the entire application */}
+      <AswaHeader />
 
-        {/* Sidebar Navigation */}
-        <aside
-          className={`fixed inset-0 z-40 bg-neutral-900 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:w-[240px] lg:w-[270px] xl:w-[280px] shrink-0 flex flex-col justify-between rounded-[28px] lg:rounded-[32px] overflow-hidden ${
-            isMobileMenuOpen ? 'translate-x-0 pt-16' : '-translate-x-full md:pt-0'
-          }`}
-        >
+      {!isAuthenticated ? (
+        <div className="flex-1 overflow-y-auto w-full flex flex-col">
+          <LoginScreen
+            onLoginSuccess={handleLoginSuccess}
+            t={t}
+            language={language}
+            setLanguage={setLanguage}
+          />
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col md:flex-row min-h-0 w-full overflow-hidden md:p-3 lg:p-4 md:gap-3 lg:gap-4 relative">
+          {/* Mobile Header */}
+          <div className="md:hidden flex items-center justify-between px-4 h-14 bg-neutral-900 z-30 border-b border-white/10 shrink-0">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition-all cursor-pointer"
+            >
+              {isMobileMenuOpen ? <X size={18} className="text-white" /> : <LayoutDashboard size={18} className="text-white" />}
+              <span className="font-semibold text-xs text-white">
+                {isTeacher ? t('Teacher Portal', 'ఉపాధ్యాయుల పోర్టల్') : t('Student Menu', 'విద్యార్థి మెను')}
+              </span>
+            </button>
+            
+            <div className="flex items-center gap-2">
+              <ThemeToggle theme={theme} onToggle={toggleTheme} t={t} />
+              <span className="text-base font-bold text-white tracking-tight flex items-center"><AnimatedLogo /></span>
+            </div>
+          </div>
+
+          {/* Sidebar Navigation */}
+          <aside
+            className={`fixed inset-0 z-40 bg-neutral-900 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:w-[240px] lg:w-[270px] xl:w-[280px] shrink-0 flex flex-col justify-between rounded-none md:rounded-[28px] lg:rounded-[32px] overflow-hidden ${
+              isMobileMenuOpen ? 'translate-x-0 pt-16 md:pt-0' : '-translate-x-full md:pt-0'
+            }`}
+          >
           <div className="py-6 lg:py-8 px-4 lg:px-6">
             <div className="hidden md:flex items-center gap-3 mb-8 lg:mb-10">
               <button
@@ -386,7 +389,7 @@ function App() {
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 min-w-0 bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white mt-16 md:mt-0 md:rounded-[32px] lg:rounded-[40px] shadow-2xl flex flex-col overflow-hidden relative w-full transition-colors duration-200">
+        <main className="flex-1 min-w-0 bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white mt-0 md:rounded-[32px] lg:rounded-[40px] shadow-2xl flex flex-col overflow-hidden relative w-full transition-colors duration-200">
           
           {/* Top Header Bar */}
           <header className="px-4 sm:px-6 lg:px-8 xl:px-10 pt-3 md:pt-4 lg:pt-5 pb-3 bg-neutral-50 dark:bg-neutral-900 z-30 sticky top-0 border-b border-black/5 dark:border-white/10 md:border-none transition-colors duration-200">
@@ -740,7 +743,9 @@ function App() {
           </div>
         )}
       </div>
-    );
-  }
+    )}
+  </div>
+);
+}
 
-  export default App;
+export default App;
