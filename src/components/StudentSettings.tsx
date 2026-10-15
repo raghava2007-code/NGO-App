@@ -94,8 +94,8 @@ export default function StudentSettings({
                 </span>
               </div>
             </div>
-            <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 px-3 py-1 rounded-full border border-neutral-200 dark:border-neutral-600">
-              {level === 'Beginner' ? t('Grade 1–3 Focus', '1–3 తరగతులు') : level === 'Intermediate' ? t('Grade 4–6 Focus', '4–6 తరగతులు') : t('Grade 7–10 Focus', '7–10 తరగతులు')}
+            <span className="text-xs sm:text-sm font-bold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-800 px-3 py-1 rounded-full border border-neutral-200 dark:border-neutral-600">
+              {t('Active Session Syllabus', 'యాక్టివ్ సెషన్ సిలబస్')}
             </span>
           </div>
         </div>

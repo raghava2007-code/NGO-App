@@ -66,7 +66,7 @@ function App() {
   });
   const [taskProgress, setTaskProgress] = useState<number>(68);
   const [studentView, setStudentView] = useState<StudentViewState>('student_home');
-  const [selectedChapterId, setSelectedChapterId] = useState<string>('c1-ch1');
+  const [selectedChapterId, setSelectedChapterId] = useState<string>('b-ch1');
   const [language, setLanguage] = useState<Language>(() => {
     try {
       const saved = localStorage.getItem('ganitmitra_language');
@@ -186,6 +186,16 @@ function App() {
     setUsername(userData.username || (userData.role === 'student' ? 'Student' : 'Teacher'));
     if (userData.level) {
       setStudentLevel(userData.level);
+      try {
+        localStorage.setItem('ganitmitra_session_level', userData.level);
+      } catch {}
+      if (userData.level === 'Beginner') {
+        setSelectedChapterId('b-ch1');
+      } else if (userData.level === 'Intermediate') {
+        setSelectedChapterId('i-ch1');
+      } else if (userData.level === 'Advanced') {
+        setSelectedChapterId('a-ch1');
+      }
     }
     if (userData.studentClass) {
       setStudentClass(userData.studentClass);

@@ -67,16 +67,24 @@ export default function StudentDashboard({
             {t('Hello, ', 'నమస్కారం, ')}{studentName} 👋
           </h1>
           <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-            {studentClass} • {t(`${currentLevel} Level`, currentLevel === 'Beginner' ? 'ప్రారంభ స్థాయి' : currentLevel === 'Intermediate' ? 'మధ్యస్థ స్థాయి' : 'అధునాతన స్థాయి')}
+            {studentClass} • {t(`${currentLevel} Level Syllabus`, currentLevel === 'Beginner' ? 'ప్రారంభ స్థాయి సిలబస్' : currentLevel === 'Intermediate' ? 'మధ్యస్థ స్థాయి సిలబస్' : 'అధునాతన స్థాయి సిలబస్')}
           </p>
         </div>
       </div>
 
-      {/* Clean Topics List / Grid - Fully Optimized for Phone & Tablet */}
+      {/* Ready to be Learnt Section - Dynamically matching active session level */}
       <div className="space-y-3">
-        <h2 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">
-          {t('My Topics', 'నా పాఠాలు')}
-        </h2>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#D4F670] inline-block animate-pulse"></span>
+            <h2 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white">
+              {t('Ready to be Learnt', 'నేర్చుకోవడానికి సిద్ధంగా ఉన్న పాఠాలు')}
+            </h2>
+          </div>
+          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#D4F670]/20 text-[#1a1a1a] dark:text-[#D4F670] border border-[#D4F670]/40">
+            {t(`${currentLevel} Level (${studentChapters.length} Chapters)`, `${currentLevel === 'Beginner' ? 'ప్రారంభ' : currentLevel === 'Intermediate' ? 'మధ్యస్థ' : 'అధునాతన'} స్థాయి (${studentChapters.length} అధ్యాయాలు)`)}
+          </span>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {studentChapters.map((ch) => (
@@ -88,11 +96,16 @@ export default function StudentDashboard({
                 {/* Header: Visual Shape + Chapter Info */}
                 <div className="flex items-center gap-2.5 mb-2.5">
                   {renderShapeIcon(ch.visualShape, String(ch.chapterNumber))}
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
-                      {t(`Chapter ${ch.chapterNumber}`, `అధ్యాయం ${ch.chapterNumber}`)}
-                    </span>
-                    <h3 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white leading-snug group-hover:text-emerald-600 dark:group-hover:text-[#D4F670] transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                        {t(`Chapter ${ch.chapterNumber}`, `అధ్యాయం ${ch.chapterNumber}`)}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                        {t(ch.badgeEn, ch.badgeTe)}
+                      </span>
+                    </div>
+                    <h3 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white leading-snug group-hover:text-emerald-600 dark:group-hover:text-[#D4F670] transition-colors truncate">
                       {t(ch.titleEn, ch.titleTe)}
                     </h3>
                   </div>

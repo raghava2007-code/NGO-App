@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { CheckCircle, ArrowRight, PlayCircle, Volume2, VolumeX, GraduationCap } from 'lucide-react';
 import { StudentLevel, Language, StudentClass, STUDENT_CLASS_OPTIONS } from '../types';
 import { speakExplanation, stopSpeaking } from '../utils/voiceExplanation';
-import { ChapterData, getChaptersForClass } from '../data/curriculumData';
+import { ChapterData, getChaptersForLevel } from '../data/curriculumData';
 import MathDiagram from './MathDiagram';
 
 interface StudentLearnProps {
@@ -24,8 +24,8 @@ export default function StudentLearn({
   selectedChapterId,
   onSelectChapter,
 }: StudentLearnProps) {
-  // Filter chapters strictly for this student's class (no intermediate or other class topics)
-  const activeClassChapters = getChaptersForClass(studentClass);
+  // Dynamically load chapters for the active session's level (universal access across all classes)
+  const activeClassChapters = getChaptersForLevel(level);
 
   const initialChapterIndex = selectedChapterId
     ? Math.max(0, activeClassChapters.findIndex((c) => c.id === selectedChapterId))

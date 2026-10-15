@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Eye, EyeOff, Calculator, GraduationCap, Presentation, Check, Globe, Lock, User, Sparkles, BookOpen, ArrowRight } from 'lucide-react';
 import AnimatedLogo from './AnimatedLogo';
 import { Language, StudentClass, STUDENT_CLASS_OPTIONS, StudentLevel, UserRole, StoredUser } from '../types';
-import { saveUser, findUser, requestPasswordReset } from '../utils/userStorage';
+import { saveUser, findUser, requestPasswordReset, updateUserSessionLevel } from '../utils/userStorage';
 
 export type { UserRole, StudentLevel };
 
@@ -176,15 +176,17 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
       setSuccessNotice(t('Login successful! Redirecting...', 'లాగిన్ విజయవంతమైంది! దారి మళ్లిస్తోంది...'));
 
       setTimeout(() => {
-        const studentLevelFromClass = matchedUser.studentClass
-          ? STUDENT_CLASS_OPTIONS.find((c) => c.value === matchedUser.studentClass)?.level
-          : undefined;
+        // CRITICAL LOGIC CHANGE: The level selected during this login screen determines the active syllabus for the session!
+        const sessionLevel: StudentLevel = selectedRole === 'student' ? selectedLevel : (matchedUser.level || 'Advanced');
+
+        if (selectedRole === 'student') {
+          updateUserSessionLevel('student', matchedUser.username, sessionLevel);
+        }
+
         onLoginSuccess({
           role: matchedUser.role,
           username: matchedUser.username,
-          level: selectedRole === 'student'
-            ? (matchedUser.level || studentLevelFromClass || 'Beginner')
-            : (matchedUser.level || 'Advanced'),
+          level: sessionLevel,
           subject: matchedUser.subject,
           studentClass: matchedUser.studentClass,
         });
@@ -404,134 +406,333 @@ export default function LoginScreen({ onLoginSuccess, t, language, setLanguage }
                 />
               </div>
 
-              {/* Class Selection Dropdown (Only for Student Create Account) */}
+              {/* ============================================================ */}
+              {/* STUDENT CREATE ACCOUNT FLOW: 1. Name, 2. Class, 3. Level, 4. Password */}
+              {/* ============================================================ */}
               {selectedRole === 'student' && authMode === 'create' && (
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-neutral-300 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <BookOpen size={14} className="text-[#D4F670]" />
-                      <span>{t('Class / Grade', 'తరగతి / గ్రేడ్')}</span>
-                    </span>
-                    <span className="text-[11px] font-bold text-[#D4F670]">
-                      {STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)?.categoryEn || ''}
-                    </span>
-                  </label>
-                  <select
-                    value={studentClass}
-                    onChange={(e) => {
-                      const newClass = e.target.value as StudentClass;
-                      setStudentClass(newClass);
-                      const matched = STUDENT_CLASS_OPTIONS.find((c) => c.value === newClass);
-                      if (matched) {
-                        setSelectedLevel(matched.level);
-                      }
-                    }}
-                    className="w-full bg-neutral-800/80 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] outline-none transition-all cursor-pointer font-light"
-                  >
-                    <optgroup label={t('Primary & Middle School (Classes 1 - 8)', 'ప్రాథమిక & మాధ్యమిక (1 - 8 తరగతులు)')} className="bg-neutral-900 text-white font-semibold">
-                      {STUDENT_CLASS_OPTIONS.filter((c) => !['Class 9', 'Class 10', 'Intermediate 1st Year', 'Intermediate 2nd Year'].includes(c.value)).map((c) => (
-                        <option key={c.value} value={c.value}>
-                          {language === 'te' ? c.labelTe : c.labelEn}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label={t('High School & College (Classes 9 - 12)', 'ఉన్నత పాఠశాల & కళాశాల (9 - 12 తరగతులు)')} className="bg-neutral-900 text-white font-semibold">
-                      {STUDENT_CLASS_OPTIONS.filter((c) => ['Class 9', 'Class 10', 'Intermediate 1st Year', 'Intermediate 2nd Year'].includes(c.value)).map((c) => (
-                        <option key={c.value} value={c.value}>
-                          {language === 'te' ? c.labelTe : c.labelEn}
-                        </option>
-                      ))}
-                    </optgroup>
-                  </select>
-                </div>
-              )}
-
-              {/* Subject Input (Only for Teacher Create Account) */}
-              {selectedRole === 'teacher' && authMode === 'create' && (
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
-                    <BookOpen size={14} className="text-[#D4F670]" />
-                    <span>{t('Subject Specialization', 'బోధించే సబ్జెక్ట్')}</span>
-                  </label>
-                  <div className="flex gap-1.5 mb-1.5 flex-wrap">
-                    {['Mathematics', 'Basic Arithmetic', 'Algebra & Geometry'].map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setTeacherSubject(s)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                          teacherSubject === s
-                            ? 'bg-[#D4F670] text-[#1a1a1a] border-[#D4F670] font-bold'
-                            : 'bg-white/5 text-neutral-400 border-white/10 hover:text-white'
-                        }`}
-                      >
-                        {s === 'Mathematics' ? t('Mathematics', 'గణితం') : s === 'Basic Arithmetic' ? t('Basic Arithmetic', 'ప్రాథమిక అంకగణితం') : t('Algebra & Geometry', 'బీజగణితం & జ్యామితి')}
-                      </button>
-                    ))}
+                <>
+                  {/* 2. Class Selection Dropdown */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-neutral-300 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <BookOpen size={14} className="text-[#D4F670]" />
+                        <span>{t('Class / Grade', 'తరగతి / గ్రేడ్')}</span>
+                      </span>
+                      <span className="text-[11px] font-bold text-[#D4F670]">
+                        {STUDENT_CLASS_OPTIONS.find((c) => c.value === studentClass)?.categoryEn || ''}
+                      </span>
+                    </label>
+                    <select
+                      value={studentClass}
+                      onChange={(e) => {
+                        const newClass = e.target.value as StudentClass;
+                        setStudentClass(newClass);
+                      }}
+                      className="w-full bg-neutral-800/80 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] outline-none transition-all cursor-pointer font-light"
+                    >
+                      <optgroup label={t('Primary & Middle School (Classes 1 - 8)', 'ప్రాథమిక & మాధ్యమిక (1 - 8 తరగతులు)')} className="bg-neutral-900 text-white font-semibold">
+                        {STUDENT_CLASS_OPTIONS.filter((c) => !['Class 9', 'Class 10', 'Intermediate 1st Year', 'Intermediate 2nd Year'].includes(c.value)).map((c) => (
+                          <option key={c.value} value={c.value}>
+                            {language === 'te' ? c.labelTe : c.labelEn}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label={t('High School & College (Classes 9 - 12)', 'ఉన్నత పాఠశాల & కళాశాల (9 - 12 తరగతులు)')} className="bg-neutral-900 text-white font-semibold">
+                        {STUDENT_CLASS_OPTIONS.filter((c) => ['Class 9', 'Class 10', 'Intermediate 1st Year', 'Intermediate 2nd Year'].includes(c.value)).map((c) => (
+                          <option key={c.value} value={c.value}>
+                            {language === 'te' ? c.labelTe : c.labelEn}
+                          </option>
+                        ))}
+                      </optgroup>
+                    </select>
                   </div>
-                  <input
-                    type="text"
-                    value={teacherSubject}
-                    onChange={(e) => setTeacherSubject(e.target.value)}
-                    placeholder={t('e.g. Mathematics', 'ఉదా: గణితం')}
-                    required
-                    className="w-full bg-neutral-800/80 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] outline-none transition-all placeholder:text-neutral-500"
-                  />
-                </div>
+
+                  {/* 3. Level Selection (Dropdown / Radio Options) */}
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                        <Sparkles size={14} className="text-[#D4F670]" />
+                        <span>{t('Level Selection', 'అభ్యాస స్థాయి ఎంపిక')}</span>
+                      </label>
+                      <span className="text-[10px] sm:text-[11px] font-semibold text-[#D4F670]">
+                        {t('Initial Syllabus Preference', 'ప్రారంభ సిలబస్ ఎంపిక')}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t('Level Selection', 'అభ్యాస స్థాయి ఎంపిక')}>
+                      {(['Beginner', 'Intermediate', 'Advanced'] as StudentLevel[]).map((lvl) => {
+                        const isSelected = selectedLevel === lvl;
+                        return (
+                          <button
+                            key={lvl}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            onClick={() => setSelectedLevel(lvl)}
+                            className={`py-2.5 sm:py-3 px-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                              isSelected
+                                ? 'bg-[#D4F670]/15 border-[#D4F670] text-white shadow-xs ring-1 ring-[#D4F670]'
+                                : 'bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-white hover:border-white/20'
+                            }`}
+                          >
+                            <span className={`text-xs sm:text-sm font-extrabold ${isSelected ? 'text-[#D4F670]' : 'text-neutral-200'}`}>
+                              {lvl === 'Beginner'
+                                ? t('Beginner', 'ప్రారంభం')
+                                : lvl === 'Intermediate'
+                                ? t('Intermediate', 'మధ్యస్థం')
+                                : t('Advanced', 'అధునాతనం')}
+                            </span>
+                            {isSelected ? (
+                              <span className="w-4 h-4 rounded-full bg-[#D4F670] text-[#1a1a1a] flex items-center justify-center shrink-0">
+                                <Check size={11} strokeWidth={3} />
+                              </span>
+                            ) : (
+                              <span className="w-4 h-4 rounded-full border border-white/20 shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-neutral-400 leading-tight">
+                      {t(
+                        'Class is saved as your demographic tag. You can access any syllabus tier regardless of class.',
+                        'తరగతి మీ శాశ్వత వివరంగా నమోదు చేయబడుతుంది. మీరు ఏ తరగతి వారైనా అన్ని స్థాయిల సిలబస్‌ను అభ్యసించవచ్చు.'
+                      )}
+                    </p>
+                  </div>
+
+                  {/* 4. Password Input */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                      <Lock size={14} className="text-[#D4F670]" />
+                      <span>{t('Password', 'పాస్‌వర్డ్')}</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          if (error) setError('');
+                        }}
+                        placeholder={t('Create a password (min 3 chars)', 'పాస్‌వర్డ్‌ను సెట్ చేయండి (కనీసం 3 అక్షరాలు)')}
+                        required
+                        className="w-full bg-neutral-800/80 border border-white/10 rounded-2xl pl-4 pr-11 py-3 text-sm text-white focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] outline-none transition-all placeholder:text-neutral-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-1 cursor-pointer transition-colors"
+                        aria-label={showPassword ? t('Hide password', 'పాస్‌వర్డ్‌ను దాచండి') : t('Show password', 'పాస్‌వర్డ్‌ను చూపించండి')}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </>
               )}
 
-              {/* Password field */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
+              {/* ============================================================ */}
+              {/* STUDENT LOG IN FLOW: 1. Name, 2. Password, 3. Level Selection */}
+              {/* ============================================================ */}
+              {selectedRole === 'student' && authMode === 'login' && (
+                <>
+                  {/* 2. Password Input (with Forgot Password) */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                      <Lock size={14} className="text-[#D4F670]" />
+                      <span>{t('Password', 'పాస్‌వర్డ్')}</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          if (error) setError('');
+                        }}
+                        placeholder={t('Enter your password', 'మీ పాస్‌వర్డ్‌ను నమోదు చేయండి')}
+                        required
+                        className="w-full bg-neutral-800/80 border border-white/10 rounded-2xl pl-4 pr-11 py-3 text-sm text-white focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] outline-none transition-all placeholder:text-neutral-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-1 cursor-pointer transition-colors"
+                        aria-label={showPassword ? t('Hide password', 'పాస్‌వర్డ్‌ను దాచండి') : t('Show password', 'పాస్‌వర్డ్‌ను చూపించండి')}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+
+                    {/* Forgot Password Button */}
+                    <div className="flex justify-end pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResetStudentUsername(username.trim());
+                          setIsForgotPasswordOpen(true);
+                          setForgotPasswordError('');
+                          setForgotPasswordSuccess('');
+                        }}
+                        className="text-xs sm:text-sm font-light text-[#D4F670] hover:text-white border border-[#D4F670]/40 hover:border-[#D4F670] bg-neutral-800/80 hover:bg-neutral-800 px-3 py-1 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-xs active:scale-95"
+                      >
+                        <span>{t('Forgot Password?', 'పాస్‌వర్డ్ మర్చిపోయారా?')}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 3. Level Selection (Active Syllabus for this session) */}
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                        <Sparkles size={14} className="text-[#D4F670]" />
+                        <span>{t('Level Selection', 'అభ్యాస స్థాయి ఎంపిక')}</span>
+                      </label>
+                      <span className="text-[10px] sm:text-[11px] font-bold text-[#D4F670]">
+                        {t('Active Syllabus for this session', 'ఈ సెషన్ కోసం యాక్టివ్ సిలబస్')}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t('Level Selection', 'అభ్యాస స్థాయి ఎంపిక')}>
+                      {(['Beginner', 'Intermediate', 'Advanced'] as StudentLevel[]).map((lvl) => {
+                        const isSelected = selectedLevel === lvl;
+                        return (
+                          <button
+                            key={lvl}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            onClick={() => setSelectedLevel(lvl)}
+                            className={`py-2.5 sm:py-3 px-3 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                              isSelected
+                                ? 'bg-[#D4F670]/15 border-[#D4F670] text-white shadow-xs ring-1 ring-[#D4F670]'
+                                : 'bg-neutral-800/80 border-white/10 text-neutral-400 hover:text-white hover:border-white/20'
+                            }`}
+                          >
+                            <span className={`text-xs sm:text-sm font-extrabold ${isSelected ? 'text-[#D4F670]' : 'text-neutral-200'}`}>
+                              {lvl === 'Beginner'
+                                ? t('Beginner', 'ప్రారంభం')
+                                : lvl === 'Intermediate'
+                                ? t('Intermediate', 'మధ్యస్థం')
+                                : t('Advanced', 'అధునాతనం')}
+                            </span>
+                            {isSelected ? (
+                              <span className="w-4 h-4 rounded-full bg-[#D4F670] text-[#1a1a1a] flex items-center justify-center shrink-0">
+                                <Check size={11} strokeWidth={3} />
+                              </span>
+                            ) : (
+                              <span className="w-4 h-4 rounded-full border border-white/20 shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-neutral-400 leading-tight">
+                      {t(
+                        'This selection determines your active syllabus. To switch levels, simply log out and select a new level on this screen.',
+                        'ఈ ఎంపిక మీ ప్రస్తుత సిలబస్‌ను నిర్ణయిస్తుంది. స్థాయిని మార్చుకోవడానికి, లాగౌట్ అయి ఈ స్క్రీన్‌లో కొత్త స్థాయిని ఎంచుకోండి.'
+                      )}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* ============================================================ */}
+              {/* TEACHER FLOWS (Create & Login) */}
+              {/* ============================================================ */}
+              {selectedRole === 'teacher' && authMode === 'create' && (
+                <>
+                  {/* Subject Input */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                      <BookOpen size={14} className="text-[#D4F670]" />
+                      <span>{t('Subject Specialization', 'బోధించే సబ్జెక్ట్')}</span>
+                    </label>
+                    <div className="flex gap-1.5 mb-1.5 flex-wrap">
+                      {['Mathematics', 'Basic Arithmetic', 'Algebra & Geometry'].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setTeacherSubject(s)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                            teacherSubject === s
+                              ? 'bg-[#D4F670] text-[#1a1a1a] border-[#D4F670] font-bold'
+                              : 'bg-white/5 text-neutral-400 border-white/10 hover:text-white'
+                          }`}
+                        >
+                          {s === 'Mathematics' ? t('Mathematics', 'గణితం') : s === 'Basic Arithmetic' ? t('Basic Arithmetic', 'ప్రాథమిక అంకగణితం') : t('Algebra & Geometry', 'బీజగణితం & జ్యామితి')}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="text"
+                      value={teacherSubject}
+                      onChange={(e) => setTeacherSubject(e.target.value)}
+                      placeholder={t('e.g. Mathematics', 'ఉదా: గణితం')}
+                      required
+                      className="w-full bg-neutral-800/80 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] outline-none transition-all placeholder:text-neutral-500"
+                    />
+                  </div>
+
+                  {/* Password */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                      <Lock size={14} className="text-[#D4F670]" />
+                      <span>{t('Password', 'పాస్‌వర్డ్')}</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          if (error) setError('');
+                        }}
+                        placeholder={t('Create a password (min 3 chars)', 'పాస్‌వర్డ్‌ను సెట్ చేయండి (కనీసం 3 అక్షరాలు)')}
+                        required
+                        className="w-full bg-neutral-800/80 border border-white/10 rounded-2xl pl-4 pr-11 py-3 text-sm text-white focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] outline-none transition-all placeholder:text-neutral-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-1 cursor-pointer transition-colors"
+                        aria-label={showPassword ? t('Hide password', 'పాస్‌వర్డ్‌ను దాచండి') : t('Show password', 'పాస్‌వర్డ్‌ను చూపించండి')}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {selectedRole === 'teacher' && authMode === 'login' && (
+                <div className="space-y-1.5">
                   <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
                     <Lock size={14} className="text-[#D4F670]" />
                     <span>{t('Password', 'పాస్‌వర్డ్')}</span>
                   </label>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      if (error) setError('');
-                    }}
-                    placeholder={
-                      authMode === 'create'
-                        ? t('Create a password (min 3 chars)', 'పాస్‌వర్డ్‌ను సెట్ చేయండి (కనీసం 3 అక్షరాలు)')
-                        : t('Enter your password', 'మీ పాస్‌వర్డ్‌ను నమోదు చేయండి')
-                    }
-                    required
-                    className="w-full bg-neutral-800/80 border border-white/10 rounded-2xl pl-4 pr-11 py-3 text-sm text-white focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] outline-none transition-all placeholder:text-neutral-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-1 cursor-pointer transition-colors"
-                    aria-label={showPassword ? t('Hide password', 'పాస్‌వర్డ్‌ను దాచండి') : t('Show password', 'పాస్‌వర్డ్‌ను చూపించండి')}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-
-                {/* Forgot Password Button - Repositioned below password section with border and increased font */}
-                {selectedRole === 'student' && authMode === 'login' && (
-                  <div className="flex justify-end pt-1">
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (error) setError('');
+                      }}
+                      placeholder={t('Enter your password', 'మీ పాస్‌వర్డ్‌ను నమోదు చేయండి')}
+                      required
+                      className="w-full bg-neutral-800/80 border border-white/10 rounded-2xl pl-4 pr-11 py-3 text-sm text-white focus:border-[#D4F670] focus:ring-1 focus:ring-[#D4F670] outline-none transition-all placeholder:text-neutral-500"
+                    />
                     <button
                       type="button"
-                      onClick={() => {
-                        setResetStudentUsername(username.trim());
-                        setIsForgotPasswordOpen(true);
-                        setForgotPasswordError('');
-                        setForgotPasswordSuccess('');
-                      }}
-                      className="text-sm font-light text-[#D4F670] hover:text-white border border-[#D4F670]/40 hover:border-[#D4F670] bg-neutral-800/80 hover:bg-neutral-800 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-sm active:scale-95"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white p-1 cursor-pointer transition-colors"
+                      aria-label={showPassword ? t('Hide password', 'పాస్‌వర్డ్‌ను దాచండి') : t('Show password', 'పాస్‌వర్డ్‌ను చూపించండి')}
                     >
-                      <span>{t('Forgot Password?', 'పాస్‌వర్డ్ మర్చిపోయారా?')}</span>
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
 
 

@@ -1,4 +1,4 @@
-import { StoredUser, INITIAL_DEMO_USERS, UserRole, StudentClass } from '../types';
+import { StoredUser, INITIAL_DEMO_USERS, UserRole, StudentClass, StudentLevel } from '../types';
 
 const STORAGE_KEY = 'ganitmitra_user_accounts';
 
@@ -105,6 +105,23 @@ export function assignStudentPin(userId: string, newPin: string): boolean {
     }
   }
   return false;
+}
+
+export function updateUserSessionLevel(role: UserRole, username: string, level: StudentLevel): void {
+  const users = getStoredUsers();
+  const normalized = username.trim().toLowerCase();
+  const index = users.findIndex(
+    (u) => u.role === role && u.username.trim().toLowerCase() === normalized
+  );
+  if (index !== -1) {
+    users[index].level = level;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+      window.dispatchEvent(new Event('ganitmitra_users_updated'));
+    } catch (e) {
+      console.warn('Error updating user session level:', e);
+    }
+  }
 }
 
 
